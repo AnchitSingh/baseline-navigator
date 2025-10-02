@@ -1,41 +1,70 @@
 {
   "name": "baseline-navigator",
   "displayName": "baseline-navigator",
-  "description": "Smart Baseline compatibility with graph visualization",
-  "version": "0.0.1",
+  "description": "Smart web platform feature recommendations with beautiful visualizations",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.104.0"
   },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Visualization"
+  ],
   "activationEvents": [
     "onLanguage:css",
+    "onLanguage:scss",
+    "onLanguage:less",
     "onLanguage:javascript",
     "onLanguage:typescript",
     "onLanguage:html"
-  ],
-  "categories": [
-    "Other"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "baseline-navigator.showGraph",
-        "title": "Baseline: Show Feature Graph"
+        "title": "Show Feature Explorer",
+        "category": "Baseline",
+        "icon": "$(graph)"
       },
       {
         "command": "baseline-navigator.checkCompatibility",
-        "title": "Baseline: Check File Compatibility"
+        "title": "Check Compatibility",
+        "category": "Baseline",
+        "icon": "$(check)"
       }
     ],
     "configuration": {
       "title": "Baseline Navigator",
       "properties": {
-        "baselineNavigator.targetBrowsers": {
-          "type": "array",
-          "default": ["chrome >= 90", "firefox >= 88", "safari >= 14"],
-          "description": "Target browsers for compatibility checking"
+        "baseline-navigator.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically check compatibility when saving files"
+        },
+        "baseline-navigator.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Baseline Navigator in status bar"
+        },
+        "baseline-navigator.recommendationConfidence": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum confidence level for showing recommendations"
         }
       }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "baseline-navigator.checkCompatibility",
+          "group": "baseline",
+          "when": "resourceExtname == .css || resourceExtname == .scss"
+        }
+      ]
     }
   },
   "scripts": {
