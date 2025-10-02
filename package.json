@@ -33,6 +33,18 @@
         "title": "Check Compatibility",
         "category": "Baseline",
         "icon": "$(check)"
+      },
+      {
+        "command": "baseline-navigator.analyzeProject",
+        "title": "Analyze My Project",
+        "category": "Baseline",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "baseline-navigator.quickProjectCheck",
+        "title": "Quick Compatibility Check",
+        "category": "Baseline",
+        "icon": "$(shield)"
       }
     ],
     "configuration": {
@@ -63,6 +75,19 @@
           "command": "baseline-navigator.checkCompatibility",
           "group": "baseline",
           "when": "resourceExtname == .css || resourceExtname == .scss"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "baseline-navigator.analyzeProject",
+          "group": "baseline",
+          "when": "explorerResourceIsFolder"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "baseline-navigator.quickProjectCheck",
+          "group": "navigation"
         }
       ]
     }

@@ -5,8 +5,54 @@ import { BaselineHoverProvider } from './providers/HoverProvider';
 import { BaselineCodeActionProvider } from './providers/CodeActionProvider';
 import { BaselineDiagnosticProvider } from './providers/DiagnosticProvider';
 import { GraphView } from './views/GraphView';
+import { ProjectAnalyzer, ProjectAnalysis } from './core/ProjectAnalyzer';
 
 let diagnosticProvider: BaselineDiagnosticProvider;
+
+// Helper function to generate detailed report
+function generateDetailedReport(analysis: ProjectAnalysis): string {
+    let report = `# Baseline Compatibility Report\n\n`;
+    report += `Generated: ${analysis.timestamp.toISOString()}\n\n`;
+    
+    report += `## Summary\n`;
+    report += `- **Compatibility Score**: ${analysis.compatibilityScore}/100\n`;
+    report += `- **Files Analyzed**: ${analysis.analyzedFiles}/${analysis.totalFiles}\n`;
+    report += `- **Features Found**: ${analysis.features.size}\n`;
+    report += `- **Risk Features**: ${analysis.riskFeatures.length}\n`;
+    report += `- **Safe Features**: ${analysis.safeFeatures.length}\n\n`;
+    
+    report += `## Risk Features (Need Attention)\n`;
+    if (analysis.riskFeatures.length > 0) {
+        analysis.riskFeatures.forEach(rf => {
+            report += `\n### ${rf.feature.name || rf.feature.id}\n`;
+            report += `- **Status**: ${rf.feature.status?.baseline || 'Unknown'}\n`;
+            report += `- **Usage Count**: ${rf.usageCount}\n`;
+            report += `- **Files**: ${rf.files.join(', ')}\n`;
+            if (rf.locations.length > 0 && rf.locations.length <= 5) {
+                report += `- **Locations**:\n`;
+                rf.locations.forEach(loc => {
+                    report += `  - ${loc.file}:${loc.line}:${loc.column}\n`;
+                });
+            }
+        });
+    } else {
+        report += `No risk features found.\n`;
+    }
+    
+    report += `\n## Safe Features\n`;
+    if (analysis.safeFeatures.length > 0) {
+        analysis.safeFeatures.slice(0, 10).forEach(sf => {
+            report += `- **${sf.feature.name || sf.feature.id}**: ${sf.usageCount} uses in ${sf.files.length} files\n`;
+        });
+    }
+    
+    report += `\n## Recommendations\n`;
+    analysis.suggestions.forEach(suggestion => {
+        report += `- ${suggestion}\n`;
+    });
+    
+    return report;
+}
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('🚀 Baseline Navigator is activating...');
@@ -47,6 +93,39 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.showGraph', () => {
                 graphView.show();
+            })
+        );
+        
+        context.subscriptions.push(
+            vscode.commands.registerCommand('baseline-navigator.analyzeProject', async () => {
+                await graphView.showProjectGraph();
+            })
+        );
+        
+        context.subscriptions.push(
+            vscode.commands.registerCommand('baseline-navigator.quickProjectCheck', async () => {
+                const analyzer = new ProjectAnalyzer(index);
+                const analysis = await analyzer.analyzeProject();
+                
+                const message = `Compatibility Score: ${analysis.compatibilityScore}/100\n${analysis.riskFeatures.length} risky features found\n${analysis.safeFeatures.length} safe features used`;
+                
+                const action = await vscode.window.showInformationMessage(
+                    message,
+                    'View Details',
+                    'Export Report'
+                );
+                
+                if (action === 'View Details') {
+                    vscode.commands.executeCommand('baseline-navigator.analyzeProject');
+                } else if (action === 'Export Report') {
+                    // Generate and show report
+                    const report = generateDetailedReport(analysis);
+                    const doc = await vscode.workspace.openTextDocument({
+                        content: report,
+                        language: 'markdown'
+                    });
+                    await vscode.window.showTextDocument(doc);
+                }
             })
         );
         

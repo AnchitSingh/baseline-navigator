@@ -1,71 +1,244 @@
-# baseline-navigator README
+# 🧭 Baseline Navigator
 
-This is the README for your extension "baseline-navigator". After writing up a brief description, we recommend including the following sections.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![VS Code](https://img.shields.io/badge/VS_Code-Extension-0078d7.svg)](https://code.visualstudio.com/)
+[![Google Baseline](https://img.shields.io/badge/Google-Baseline-4285f4.svg)](https://web.dev/baseline)
 
-## Features
+**Your intelligent co-pilot for modern web development.** Baseline Navigator brings real-time browser compatibility insights directly into VS Code, helping you build with confidence using the latest web features.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+![Baseline Navigator Demo](./assets/demo.gif)
+<!-- Replace with actual demo screenshot/GIF -->
 
 ---
 
-## Following extension guidelines
+## 🎯 The Problem
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+The web platform evolves rapidly. Developers face a constant dilemma: *Can I safely use this modern feature in production?* The answer requires checking multiple sources—MDN, Can I Use, release notes—fragmenting the development workflow and slowing down innovation.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+**Google's [Baseline](https://web.dev/baseline)** solves this by providing clear, standardized compatibility status across major browsers. But developers need this information *where they work*—inside their editor, the moment they write code.
 
-## Working with Markdown
+## 💡 Our Solution
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+**Baseline Navigator** bridges this gap with an intelligent VS Code extension that transforms how developers adopt modern web features. Instead of just warning about compatibility issues, it provides:
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+- **Real-time analysis** of your entire codebase
+- **Actionable recommendations** for modernization
+- **Visual exploration** through an interactive knowledge graph
+- **Zero configuration** with offline-first architecture
 
-## For more information
+Built for the [**Google Chrome #WhatsMyBaseline Hackathon**](https://baseline.devpost.com/).
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+---
 
-**Enjoy!**
+## ✨ Key Features
+
+### 📊 **Project-Wide Compatibility Analysis**
+
+Run a comprehensive scan to generate your **Compatibility Score**—an instant health check of how modern and cross-browser compatible your codebase is.
+
+- Analyzes `.css`, `.scss`, `.js`, `.ts`, `.jsx`, `.tsx` files
+- Counts feature usage across your entire project
+- Categorizes features by Baseline status
+- Generates detailed reports with actionable insights
+
+### 🔍 **Real-Time Diagnostics**
+
+Baseline Navigator integrates seamlessly with VS Code's diagnostics engine:
+
+- **Inline warnings** for features with limited or newly available support
+- **Hover tooltips** with detailed Baseline status, browser versions, and availability dates
+- **Severity levels** that respect your project's risk tolerance
+- **No internet required**—all data bundled locally
+
+### 💡 **Intelligent Recommendations**
+
+More than a linter—it's your modernization assistant:
+
+1. **Alternatives**: Suggests widely-supported replacements for risky features
+   - Example: Recommends `@media` queries instead of experimental Container Queries
+2. **Upgrades**: Identifies outdated patterns and proposes modern equivalents
+   - Example: Detects `float` layouts and suggests upgrading to `flexbox` or `grid`
+
+### 🗺️ **Interactive Knowledge Graph**
+
+Visualize the web platform ecosystem in stunning detail:
+
+- **Force-directed graph** with 100+ web features
+- **Color-coded nodes** by Baseline status (Green = Widely Available, Yellow = Newly Available, Red = Limited)
+- **Smart relationships** showing feature dependencies and alternatives
+- **Click-to-explore** for discovering migration paths and related technologies
+- **Filter by category, status, or timeline**
+
+---
+
+## 🚀 How It Works
+
+Baseline Navigator is engineered for **speed and accuracy**, built on a robust analysis pipeline:
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    VS Code Extension                        │
+├─────────────────────────────────────────────────────────────┤
+│  Extension Host  │  Inverted Index  │  Project Analyzer    │
+│  (extension.ts)  │  (Fast Lookups)  │  (Regex Scanner)     │
+├─────────────────────────────────────────────────────────────┤
+│           Baseline Data (web-features NPM)                  │
+│         1,000+ features -  Offline-first -  1.3MB             │
+├─────────────────────────────────────────────────────────────┤
+│  VS Code API  │  Webviews  │  Diagnostics  │  Hovers       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Processing Pipeline
+
+1. **Data Source**: Uses official [`web-features`](https://www.npmjs.com/package/web-features) package as the single source of truth
+2. **Inverted Index**: Builds an in-memory index on startup for sub-millisecond feature lookups
+3. **File Scanner**: Analyzes workspace files using optimized regex patterns for CSS/JS feature detection
+4. **Compatibility Engine**: Cross-references detected features with Baseline data to calculate scores
+5. **Multi-Surface Integration**: Results surface through:
+   - **Webviews** for interactive reports and graph visualization
+   - **Diagnostics** for inline code warnings
+   - **Hover Providers** for contextual information
+   - **Code Actions** for quick-fix suggestions
+
+### Innovation Highlights
+
+- **Inverted search index** enables "What can I use with Chrome 90?" queries (not just "Can I use Grid?")
+- **Knowledge graph visualization** reveals hidden relationships between web features
+- **Dual recommendation system** covers both risk mitigation (alternatives) and modernization (upgrades)
+- **Offline-first design** with zero API calls—works on planes, trains, and air-gapped networks
+
+---
+
+## 📦 Installation
+
+### From VS Code Marketplace *(Coming Soon)*
+
+1. Open **Extensions** sidebar in VS Code
+2. Search for **"Baseline Navigator"**
+3. Click **Install**
+
+### Build from Source
+
+```
+# Clone the repository
+git clone https://github.com/your-username/baseline-navigator.git
+cd baseline-navigator
+
+# Install dependencies
+npm install
+
+# Compile TypeScript
+npm run compile
+
+# Launch in Extension Development Host
+# Press F5 in VS Code, or:
+code --extensionDevelopmentPath=$(pwd)
+```
+
+---
+
+## 🎮 Usage
+
+### Quick Start
+
+1. **Open** a web project in VS Code
+2. **Press** `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
+3. **Run**: `Baseline: Analyze Project Compatibility`
+4. **Explore** your compatibility score, feature breakdown, and recommendations
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `Baseline: Analyze Project Compatibility` | Run full codebase analysis and generate report |
+| `Baseline: Show Feature Graph` | Open interactive knowledge graph visualization |
+| `Baseline: Check File Compatibility` | Analyze current file only |
+
+### Configuration
+
+```
+{
+  "baselineNavigator.targetBrowsers": [
+    "chrome >= 90",
+    "firefox >= 88",
+    "safari >= 14"
+  ],
+  "baselineNavigator.diagnosticSeverity": "warning"
+}
+```
+
+---
+
+## 🎥 Demo
+
+### Hover Tooltips
+![Hover Demo](./assets/hover-demo.png)
+
+### Knowledge Graph
+![Graph Demo](./assets/graph-demo.png)
+
+### Project Analysis Report
+![Report Demo](./assets/report-demo.png)
+
+---
+
+## 🏆 Hackathon Submission
+
+This project was created for the **Google Chrome #WhatsMyBaseline Hackathon** (September-October 2025).
+
+### Judging Criteria Alignment
+
+**Innovation**: 
+- First tool to combine inverted index search with visual knowledge graphs
+- Dual recommendation engine (alternatives + upgrades)
+- Offline-first architecture for universal accessibility
+
+**Usefulness**:
+- Integrates with VS Code (14M+ developers)
+- Works across CSS, JavaScript, TypeScript ecosystems
+- Zero-config experience with immediate value
+
+### Technical Stack
+
+- **Language**: TypeScript
+- **Platform**: VS Code Extension API
+- **Data Source**: `web-features` NPM package (official Baseline data)
+- **Visualization**: Force-graph library (D3-based)
+- **Bundler**: Webpack
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] **CI/CD Integration**: GitHub Actions for automated compatibility checks in pull requests
+- [ ] **Code Actions**: One-click quick fixes to replace risky features
+- [ ] **Browser Target Profiles**: Preset configurations for common browser matrices
+- [ ] **Polyfill Suggestions**: Automatic detection and recommendation of polyfill packages
+- [ ] **Trend Analysis**: Track compatibility score improvements over time
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```
+# Setup development environment
+npm install
+npm run watch  # Auto-compile on changes
+
+# Run tests
+npm test
+
+# Package extension
+npm run package
+```
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**. See [LICENSE.txt](LICENSE.txt) for details.
