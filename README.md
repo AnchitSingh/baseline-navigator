@@ -5,7 +5,7 @@
 
 **Your intelligent co-pilot for modern web development.** Baseline Navigator brings real-time browser compatibility insights directly into VS Code, helping you build with confidence using the latest web features.
 
-![Baseline Navigator Demo](./demo/full.gif)
+![Baseline Navigator Demo](./assets/full.gif)
 
 ---
 
@@ -112,22 +112,24 @@ Baseline Navigator is engineered for **speed and accuracy**, built on a robust a
 
 ## Installation
 
-### Build from Source
+
+### Option 1: Install Pre-built Extension (Recommended for Testing)
+
+1. Download the latest release: [`baseline-navigator-1.0.0.vsix`](https://github.com/AnchitSingh/baseline-navigator/releases/latest)
+2. Open VS Code
+3. Go to **Extensions** → Click `...` (three dots) → **Install from VSIX...**
+4. Select the downloaded `.vsix` file
+5. Reload VS Code
+6. Done! Try hovering over CSS in any file
+
+### Option 2: Build from Source (For Development)
 
 ```
-# Clone the repository
-git clone https://github.com/AnchitSingh/baseline-navigator
+git clone https://github.com/AnchitSingh/baseline-navigator.git
 cd baseline-navigator
-
-# Install dependencies
 npm install
-
-# Compile TypeScript
 npm run compile
-
-# Launch in Extension Development Host
-# Press F5 in VS Code, or:
-code --extensionDevelopmentPath=$(pwd)
+# Press F5 in VS Code to launch Extension Development Host
 ```
 
 ---
@@ -154,13 +156,13 @@ code --extensionDevelopmentPath=$(pwd)
 ## 🎥 Demo
 
 ### Hover Tooltips
-![Hover Demo](./demo/hover.gif)
+![Hover Demo](./assets/hover.gif)
 
 ### Knowledge Graph
-![Graph Demo](./demo/knowledge_graph.gif)
+![Graph Demo](./assets/knowledge_graph.gif)
 
 ### Project Analysis Report
-![Report Demo](./demo/project_analyzer.gif)
+![Report Demo](./assets/project_analyzer.gif)
 
 ---
 

@@ -1,0 +1,73 @@
+/* Widely Supported Features */
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.flex-container {
+    display: flex;
+}
+
+:root {
+    --primary-color: #007acc;
+    --spacing: 1rem;
+}
+
+.variables {
+    color: var(--primary-color);
+}
+
+/* Limited Support Features */
+.subgrid-example {
+    display: subgrid;
+}
+
+.grid-item {
+    grid-template-rows: subgrid;
+}
+
+/* Container Queries */
+@container (min-width: 400px) {
+    .container-child {
+        font-size: 1.5em;
+    }
+}
+
+.container-element {
+    container-type: inline-size;
+}
+
+/* CSS :has() selector */
+.ancestor:has(.descendant) {
+    background: yellow;
+}
+
+.parent:has(> img) {
+    padding: 1rem;
+}
+
+/* CSS Nesting */
+.element {
+    color: red;
+    & .nested { 
+        color: blue;
+    }
+    &.active {
+        display: block;
+    }
+}
+
+/* Other limited features */
+.backdrop {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+.aspect {
+    aspect-ratio: 16 / 9;
+}
+
+.cascade-layer {
+    @layer layout, theme, utilities;
+}
