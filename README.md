@@ -5,8 +5,7 @@
 
 **Your intelligent co-pilot for modern web development.** Baseline Navigator brings real-time browser compatibility insights directly into VS Code, helping you build with confidence using the latest web features.
 
-![Baseline Navigator Demo](./assets/demo.gif)
-<!-- Replace with actual demo screenshot/GIF -->
+![Baseline Navigator Demo](./demo/full.gif)
 
 ---
 
@@ -113,12 +112,6 @@ Baseline Navigator is engineered for **speed and accuracy**, built on a robust a
 
 ## Installation
 
-### From VS Code Marketplace *(Coming Soon)*
-
-1. Open **Extensions** sidebar in VS Code
-2. Search for **"Baseline Navigator"**
-3. Click **Install**
-
 ### Build from Source
 
 ```
@@ -156,37 +149,18 @@ code --extensionDevelopmentPath=$(pwd)
 | `Baseline: Show Feature Graph` | Open interactive knowledge graph visualization |
 | `Baseline: Check File Compatibility` | Analyze current file only |
 
-### Configuration
-
-```
-{
-  "baselineNavigator.targetBrowsers": [
-    "chrome >= 90",
-    "firefox >= 88",
-    "safari >= 14"
-  ],
-  "baselineNavigator.diagnosticSeverity": "warning"
-}
-```
-
 ---
 
 ## 🎥 Demo
 
 ### Hover Tooltips
-<video src="./demo/hover.webm" width="800" height="450" controls>
-  Your browser does not support the video tag.
-</video>
+![Hover Demo](./demo/hover.gif)
 
 ### Knowledge Graph
-<video src="./demo/knowledge_graph.webm" width="800" height="450" controls>
-  Your browser does not support the video tag.
-</video>
+![Graph Demo](./demo/knowledge_graph.gif)
 
 ### Project Analysis Report
-<video src="./demo/project_analyzer.webm" width="800" height="450" controls>
-  Your browser does not support the video tag.
-</video>
+![Report Demo](./demo/project_analyzer.gif)
 
 ---
 
