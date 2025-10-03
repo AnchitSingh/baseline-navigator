@@ -134,7 +134,7 @@ npm run compile
 
 ---
 
-## 🎮 Usage
+## Usage
 
 ### Quick Start
 
@@ -166,7 +166,7 @@ npm run compile
 
 ---
 
-## 🏆 Hackathon Submission
+## Hackathon Submission
 
 This project was created for the **Baseline Tooling Hackathon** (September-October 2025).
 
@@ -193,6 +193,6 @@ This project was created for the **Baseline Tooling Hackathon** (September-Octob
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
