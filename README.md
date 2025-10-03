@@ -1,7 +1,6 @@
 # 🧭 Baseline Navigator
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![VS Code](https://img.shields.io/badge/VS_Code-Extension-0078d7.svg)](https://code.visualstudio.com/)
 [![Google Baseline](https://img.shields.io/badge/Google-Baseline-4285f4.svg)](https://web.dev/baseline)
 
 **Your intelligent co-pilot for modern web development.** Baseline Navigator brings real-time browser compatibility insights directly into VS Code, helping you build with confidence using the latest web features.
@@ -11,13 +10,13 @@
 
 ---
 
-## 🎯 The Problem
+## The Problem
 
 The web platform evolves rapidly. Developers face a constant dilemma: *Can I safely use this modern feature in production?* The answer requires checking multiple sources—MDN, Can I Use, release notes—fragmenting the development workflow and slowing down innovation.
 
 **Google's [Baseline](https://web.dev/baseline)** solves this by providing clear, standardized compatibility status across major browsers. But developers need this information *where they work*—inside their editor, the moment they write code.
 
-## 💡 Our Solution
+## Our Solution
 
 **Baseline Navigator** bridges this gap with an intelligent VS Code extension that transforms how developers adopt modern web features. Instead of just warning about compatibility issues, it provides:
 
@@ -26,13 +25,13 @@ The web platform evolves rapidly. Developers face a constant dilemma: *Can I saf
 - **Visual exploration** through an interactive knowledge graph
 - **Zero configuration** with offline-first architecture
 
-Built for the [**Google Chrome #WhatsMyBaseline Hackathon**](https://baseline.devpost.com/).
+Built for the [**Baseline Tooling Hackathon**](https://baseline.devpost.com/).
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 📊 **Project-Wide Compatibility Analysis**
+### **Project-Wide Compatibility Analysis**
 
 Run a comprehensive scan to generate your **Compatibility Score**—an instant health check of how modern and cross-browser compatible your codebase is.
 
@@ -41,7 +40,7 @@ Run a comprehensive scan to generate your **Compatibility Score**—an instant h
 - Categorizes features by Baseline status
 - Generates detailed reports with actionable insights
 
-### 🔍 **Real-Time Diagnostics**
+### **Real-Time Diagnostics**
 
 Baseline Navigator integrates seamlessly with VS Code's diagnostics engine:
 
@@ -50,7 +49,7 @@ Baseline Navigator integrates seamlessly with VS Code's diagnostics engine:
 - **Severity levels** that respect your project's risk tolerance
 - **No internet required**—all data bundled locally
 
-### 💡 **Intelligent Recommendations**
+### **Intelligent Recommendations**
 
 More than a linter—it's your modernization assistant:
 
@@ -59,7 +58,7 @@ More than a linter—it's your modernization assistant:
 2. **Upgrades**: Identifies outdated patterns and proposes modern equivalents
    - Example: Detects `float` layouts and suggests upgrading to `flexbox` or `grid`
 
-### 🗺️ **Interactive Knowledge Graph**
+### **Interactive Knowledge Graph**
 
 Visualize the web platform ecosystem in stunning detail:
 
@@ -71,7 +70,7 @@ Visualize the web platform ecosystem in stunning detail:
 
 ---
 
-## 🚀 How It Works
+## How It Works
 
 Baseline Navigator is engineered for **speed and accuracy**, built on a robust analysis pipeline:
 
@@ -112,7 +111,7 @@ Baseline Navigator is engineered for **speed and accuracy**, built on a robust a
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### From VS Code Marketplace *(Coming Soon)*
 
@@ -124,7 +123,7 @@ Baseline Navigator is engineered for **speed and accuracy**, built on a robust a
 
 ```
 # Clone the repository
-git clone https://github.com/your-username/baseline-navigator.git
+git clone https://github.com/AnchitSingh/baseline-navigator
 cd baseline-navigator
 
 # Install dependencies
@@ -175,19 +174,25 @@ code --extensionDevelopmentPath=$(pwd)
 ## 🎥 Demo
 
 ### Hover Tooltips
-![Hover Demo](./assets/hover-demo.png)
+<video src="./demo/hover.webm" width="800" height="450" controls>
+  Your browser does not support the video tag.
+</video>
 
 ### Knowledge Graph
-![Graph Demo](./assets/graph-demo.png)
+<video src="./demo/knowledge_graph.webm" width="800" height="450" controls>
+  Your browser does not support the video tag.
+</video>
 
 ### Project Analysis Report
-![Report Demo](./assets/report-demo.png)
+<video src="./demo/project_analyzer.webm" width="800" height="450" controls>
+  Your browser does not support the video tag.
+</video>
 
 ---
 
 ## 🏆 Hackathon Submission
 
-This project was created for the **Google Chrome #WhatsMyBaseline Hackathon** (September-October 2025).
+This project was created for the **Baseline Tooling Hackathon** (September-October 2025).
 
 ### Judging Criteria Alignment
 
@@ -209,33 +214,6 @@ This project was created for the **Google Chrome #WhatsMyBaseline Hackathon** (S
 - **Visualization**: Force-graph library (D3-based)
 - **Bundler**: Webpack
 
----
-
-## 🛣️ Roadmap
-
-- [ ] **CI/CD Integration**: GitHub Actions for automated compatibility checks in pull requests
-- [ ] **Code Actions**: One-click quick fixes to replace risky features
-- [ ] **Browser Target Profiles**: Preset configurations for common browser matrices
-- [ ] **Polyfill Suggestions**: Automatic detection and recommendation of polyfill packages
-- [ ] **Trend Analysis**: Track compatibility score improvements over time
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-```
-# Setup development environment
-npm install
-npm run watch  # Auto-compile on changes
-
-# Run tests
-npm test
-
-# Package extension
-npm run package
-```
 
 ---
 
