@@ -2,6 +2,10 @@
   "name": "baseline-navigator",
   "displayName": "baseline-navigator",
   "description": "Smart web platform feature recommendations with beautiful visualizations",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnchitSingh/baseline-navigator.git"
+  },
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.104.0"

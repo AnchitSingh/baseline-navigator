@@ -193,4 +193,4 @@ This project was created for the **Baseline Tooling Hackathon** (September-Octob
 
 ## 📜 License
 
-This project is licensed under the **MIT License**. See [LICENSE.txt](LICENSE.txt) for details.
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
