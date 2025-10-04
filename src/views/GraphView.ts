@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { InvertedIndex } from '../core/InvertedIndex';
+import { RecommendationEngine } from '../core/RecommendationEngine';
 import { ProjectAnalyzer } from '../core/ProjectAnalyzer';
 import { GraphDataBuilder } from './graph/builders/GraphDataBuilder';
 import { ProjectGraphBuilder } from './graph/builders/ProjectGraphBuilder';
@@ -10,6 +11,7 @@ export class GraphView {
     private panel: vscode.WebviewPanel | undefined;
     private graphDataBuilder: GraphDataBuilder;
     private projectGraphBuilder: ProjectGraphBuilder;
+    private recommendationEngine: RecommendationEngine;
 
     constructor(
         private extensionUri: vscode.Uri,
@@ -17,6 +19,7 @@ export class GraphView {
     ) {
         this.graphDataBuilder = new GraphDataBuilder();
         this.projectGraphBuilder = new ProjectGraphBuilder();
+        this.recommendationEngine = new RecommendationEngine(index);
     }
 
     public async show() {
@@ -89,15 +92,77 @@ export class GraphView {
         this.panel?.webview.onDidReceiveMessage(async message => {
             switch (message.command) {
                 case 'getFeatureDetails':
-                    const feature = this.index.getFeature(message.featureId);
-                    const similar = await this.index.getSimilarFeatures(message.featureId);
-                    this.panel?.webview.postMessage({
-                        command: 'showDetails',
-                        feature,
-                        similar
-                    });
+                    await this.handleFeatureDetailsRequest(message);
+                    break;
+                case 'getRecommendations':
+                    await this.handleRecommendationsRequest(message);
                     break;
             }
+        });
+    }
+
+    private async handleFeatureDetailsRequest(message: any): Promise<void> {
+        const feature = this.index.getFeature(message.featureId);
+        
+        if (!feature) {
+            console.error(`Feature not found: ${message.featureId}`);
+            this.panel?.webview.postMessage({
+                command: 'showDetails',
+                error: 'Feature not found'
+            });
+            return;
+        }
+
+        // Get basic similar features for context
+        const similar = await this.index.getSimilarFeatures(message.featureId);
+
+        this.panel?.webview.postMessage({
+            command: 'showDetails',
+            feature: feature,
+            similar: similar.slice(0, 5)
+        });
+    }
+
+    private async handleRecommendationsRequest(message: any): Promise<void> {
+        const feature = this.index.getFeature(message.featureId);
+        
+        if (!feature) {
+            console.error(`Feature not found: ${message.featureId}`);
+            return;
+        }
+
+        console.log(`Getting recommendations for: ${message.featureId}`);
+
+        // Use the enhanced recommendation engine
+        const recommendations = await this.recommendationEngine.getRecommendations({
+            currentFeature: message.featureId,
+            documentLanguage: message.languageId || 'css',
+            targetBrowsers: message.targetBrowsers || ['chrome', 'firefox', 'safari', 'edge']
+        });
+
+        console.log(`Found ${recommendations.length} recommendations`);
+
+        // Transform recommendations for the webview
+        const transformedRecs = recommendations.map(rec => ({
+            feature: {
+                id: rec.feature.id,
+                name: rec.feature.name || rec.feature.id,
+                description: rec.feature.description,
+                status: rec.feature.status
+            },
+            reason: rec.reason,
+            confidence: rec.confidence,
+            type: rec.type || 'related',
+            alternatives: rec.alternatives?.map(alt => ({
+                id: alt.id,
+                name: alt.name || alt.id
+            })) || []
+        }));
+
+        this.panel?.webview.postMessage({
+            command: 'showRecommendations',
+            featureId: message.featureId,
+            recommendations: transformedRecs
         });
     }
 

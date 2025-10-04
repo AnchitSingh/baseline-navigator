@@ -45,6 +45,7 @@ export interface Recommendation {
     confidence: number;
     alternatives?: Feature[];
     upgrade?: Feature;
+    type?: 'alternative' | 'upgrade' | 'complementary' | 'contextual'; // ADD THIS
 }
 
 export interface CompatibilityReport {

@@ -1,9 +1,18 @@
 import { Feature, Recommendation, RecommendationContext } from '../types';
 import { InvertedIndex } from './InvertedIndex';
-import { ALTERNATIVES_MAPPING } from './FeatureMappings';
+import { FeaturePatternRegistry } from './FeaturePatternRegistry';
+import { SimilarityEngine, SimilarityScore } from './SimilarityEngine';
 
 export class RecommendationEngine {
-    constructor(private index: InvertedIndex) {}
+    private patternRegistry: FeaturePatternRegistry;
+    private similarityEngine: SimilarityEngine;
+    private recommendationCache: Map<string, Recommendation[]> = new Map();
+    private cacheTimeout = 5 * 60 * 1000; // 5 minutes
+
+    constructor(private index: InvertedIndex) {
+        this.patternRegistry = new FeaturePatternRegistry();
+        this.similarityEngine = new SimilarityEngine();
+    }
 
     public async getRecommendations(context: RecommendationContext): Promise<Recommendation[]> {
         try {
@@ -12,122 +21,72 @@ export class RecommendationEngine {
             console.error('Failed to get recommendations: Index not ready', error);
             return [];
         }
+
+        // Check cache
+        const cacheKey = this.getCacheKey(context);
+        if (this.recommendationCache.has(cacheKey)) {
+            return this.recommendationCache.get(cacheKey)!;
+        }
+
         const recommendations: Recommendation[] = [];
-        
         const currentFeature = this.index.getFeature(context.currentFeature);
-        if (!currentFeature) return [];
 
-        // Get alternatives if current feature has limited support
+        if (!currentFeature) {
+            console.warn(`Feature not found: ${context.currentFeature}`);
+            return [];
+        }
+
+        const allFeatures = this.index.getAllFeatures();
+
+        // 1. HARDCODED ALTERNATIVES (from pattern registry) - Highest priority
+        const hardcodedAlternatives = await this.getHardcodedAlternatives(currentFeature);
+        recommendations.push(...hardcodedAlternatives);
+
+        // 2. ALGORITHMIC ALTERNATIVES (if limited support)
         if (this.isLimitedSupport(currentFeature)) {
-            const alternatives = await this.findAlternatives(currentFeature);
-            if (alternatives.length > 0) {
-                recommendations.push({
-                    feature: alternatives[0],
-                    reason: `Better browser support than ${currentFeature.name}`,
-                    confidence: 0.9,
-                    alternatives: alternatives.slice(1, 3)
-                });
-            }
+            const algorithmicAlternatives = await this.getAlgorithmicAlternatives(currentFeature, allFeatures);
+            recommendations.push(...algorithmicAlternatives);
         }
 
-        // Get upgrade path if newer version exists
-        const upgrade = await this.findUpgradePath(currentFeature);
-        if (upgrade) {
-            recommendations.push({
-                feature: upgrade,
-                reason: 'Newer version available with enhanced features',
-                confidence: 0.85,
-                upgrade
-            });
-        }
+        // 3. UPGRADE PATHS (hardcoded + algorithmic)
+        const upgrades = await this.getUpgradePaths(currentFeature, allFeatures);
+        recommendations.push(...upgrades);
 
-        // Get related features
-        const similar = await this.index.getSimilarFeatures(context.currentFeature);
-        similar.slice(0, 3).forEach(feature => {
-            if (this.isWidelySupported(feature)) {
-                recommendations.push({
-                    feature,
-                    reason: `Related to ${currentFeature.name}`,
-                    confidence: 0.7
-                });
-            }
-        });
+        // 4. COMPLEMENTARY FEATURES (work well together)
+        const complementary = await this.getComplementaryFeatures(currentFeature, allFeatures);
+        recommendations.push(...complementary);
 
-        // Context-aware recommendations
-        if (context.documentLanguage === 'css') {
-            const cssRecommendations = await this.getCSSRecommendations(currentFeature);
-            recommendations.push(...cssRecommendations);
-        }
+        // 5. CONTEXT-SPECIFIC RECOMMENDATIONS
+        const contextual = await this.getContextualRecommendations(currentFeature, context, allFeatures);
+        recommendations.push(...contextual);
 
-        return this.rankRecommendations(recommendations);
+        // Rank and deduplicate
+        const rankedRecommendations = this.rankRecommendations(recommendations);
+
+        // Cache results
+        this.recommendationCache.set(cacheKey, rankedRecommendations);
+        setTimeout(() => this.recommendationCache.delete(cacheKey), this.cacheTimeout);
+
+        return rankedRecommendations;
     }
 
-    private async findAlternatives(feature: Feature): Promise<Feature[]> {
-        const alternatives: Feature[] = [];
-        
-        // Predefined alternatives mapping
-        const alternativeMap = ALTERNATIVES_MAPPING;
+    /**
+     * Get hardcoded alternatives from pattern registry
+     */
+    private async getHardcodedAlternatives(feature: Feature): Promise<Recommendation[]> {
+        const pattern = this.patternRegistry.getPattern(feature.id);
+        if (!pattern?.alternatives) return [];
 
-        const altIds = alternativeMap[feature.id] || [];
-        for (const altId of altIds) {
+        const recommendations: Recommendation[] = [];
+
+        for (const altId of pattern.alternatives) {
             const altFeature = this.index.getFeature(altId);
             if (altFeature && this.isWidelySupported(altFeature)) {
-                alternatives.push(altFeature);
-            }
-        }
-
-        // Find features in same category with better support
-        const category = feature.spec?.category || feature.group;
-        if (category) {
-            const categoryFeatures = await this.index.getByCategory(category);
-            const betterSupported = categoryFeatures
-                .filter(f => 
-                    f.id !== feature.id && 
-                    this.isWidelySupported(f) &&
-                    this.calculateSimilarity(feature, f) > 0.5
-                )
-                .slice(0, 3);
-            alternatives.push(...betterSupported);
-        }
-
-        return alternatives;
-    }
-
-    private async findUpgradePath(feature: Feature): Promise<Feature | null> {
-        // Look for features with similar names but newer baseline dates
-        const allFeatures = this.index.getAllFeatures();
-        const baseName = feature.name?.toLowerCase().replace(/[0-9]+$/, '') || '';
-        
-        const upgrades = allFeatures.filter(f => {
-            if (f.id === feature.id) return false;
-            const fname = f.name?.toLowerCase() || '';
-            return fname.includes(baseName) && 
-                   this.isNewerThan(f, feature) &&
-                   this.isWidelySupported(f);
-        });
-
-        return upgrades[0] || null;
-    }
-
-    private async getCSSRecommendations(feature: Feature): Promise<Recommendation[]> {
-        const recommendations: Recommendation[] = [];
-        
-        // Modern CSS features that work well together
-        const modernCSSPairs: Record<string, string[]> = {
-            'grid': ['subgrid', 'gap', 'grid-template'],
-            'flexbox': ['gap', 'flex-wrap', 'align-content'],
-            'custom-properties': ['calc', 'clamp', 'min-max'],
-            'transforms': ['transform-3d', 'perspective', 'backface-visibility'],
-        };
-
-        const relatedIds = modernCSSPairs[feature.id] || [];
-        for (const relatedId of relatedIds) {
-            const relatedFeature = this.index.getFeature(relatedId);
-            if (relatedFeature && this.isWidelySupported(relatedFeature)) {
                 recommendations.push({
-                    feature: relatedFeature,
-                    reason: `Works well with ${feature.name}`,
-                    confidence: 0.75
+                    feature: altFeature,
+                    reason: `Better browser support than ${feature.name || feature.id}`,
+                    confidence: 0.95, // High confidence for curated alternatives
+                    type: 'alternative'
                 });
             }
         }
@@ -135,59 +94,190 @@ export class RecommendationEngine {
         return recommendations;
     }
 
-    private calculateSimilarity(f1: Feature, f2: Feature): number {
-        let score = 0;
-        
-        // Same category
-        if (f1.spec?.category === f2.spec?.category) score += 0.3;
-        if (f1.group === f2.group) score += 0.2;
-        
-        // Similar names
-        const name1 = f1.name?.toLowerCase() || '';
-        const name2 = f2.name?.toLowerCase() || '';
-        const nameWords1 = new Set(name1.split(/\s+/));
-        const nameWords2 = new Set(name2.split(/\s+/));
-        const commonWords = Array.from(nameWords1).filter(w => nameWords2.has(w));
-        score += (commonWords.length / Math.max(nameWords1.size, nameWords2.size)) * 0.5;
-        
-        return Math.min(score, 1);
-    }
+    /**
+     * Get algorithmic alternatives using similarity engine
+     */
+    private async getAlgorithmicAlternatives(feature: Feature, allFeatures: Feature[]): Promise<Recommendation[]> {
+        const alternatives = this.similarityEngine.findBetterAlternatives(feature, allFeatures, 3);
 
-    private rankRecommendations(recommendations: Recommendation[]): Recommendation[] {
-        return recommendations.sort((a, b) => {
-            // Sort by confidence first
-            if (b.confidence !== a.confidence) {
-                return b.confidence - a.confidence;
-            }
-            
-            // Then by baseline status
-            const aScore = this.getBaselineScore(a.feature);
-            const bScore = this.getBaselineScore(b.feature);
-            return bScore - aScore;
+        return alternatives.map(alt => {
+            const altFeature = this.index.getFeature(alt.featureId)!;
+            return {
+                feature: altFeature,
+                reason: `Similar functionality with better support${alt.reasons.length > 0 ? ': ' + alt.reasons.join(', ') : ''}`,
+                confidence: Math.min(0.85, alt.score), // Cap algorithmic confidence at 0.85
+                type: 'alternative'
+            };
         });
     }
 
-    private getBaselineScore(feature: Feature): number {
-        const baseline = feature.status?.baseline;
-        if (baseline === 'widely') return 3;
-        if (baseline === 'newly') return 2;
-        if (baseline === 'limited') return 1;
-        return 0;
+    /**
+     * Get upgrade paths (hardcoded + algorithmic)
+     */
+    private async getUpgradePaths(feature: Feature, allFeatures: Feature[]): Promise<Recommendation[]> {
+        const recommendations: Recommendation[] = [];
+
+        // 1. Hardcoded upgrades from pattern registry
+        const pattern = this.patternRegistry.getPattern(feature.id);
+        if (pattern?.upgradeTo) {
+            const upgradeFeature = this.index.getFeature(pattern.upgradeTo);
+            if (upgradeFeature && this.isWidelySupported(upgradeFeature)) {
+                recommendations.push({
+                    feature: upgradeFeature,
+                    reason: `Modern replacement for ${feature.name || feature.id}`,
+                    confidence: 0.9,
+                    upgrade: upgradeFeature,
+                    type: 'upgrade'
+                });
+            }
+        }
+
+        // 2. Algorithmic upgrades
+        const algorithmicUpgrades = this.similarityEngine.findUpgradePaths(feature, allFeatures, 2);
+
+        algorithmicUpgrades.forEach(upgrade => {
+            const upgradeFeature = this.index.getFeature(upgrade.featureId)!;
+
+            // Don't duplicate hardcoded upgrades
+            if (!recommendations.find(r => r.feature.id === upgradeFeature.id)) {
+                recommendations.push({
+                    feature: upgradeFeature,
+                    reason: `Newer version with enhanced features${upgrade.reasons.length > 0 ? ': ' + upgrade.reasons.join(', ') : ''}`,
+                    confidence: Math.min(0.8, upgrade.score),
+                    upgrade: upgradeFeature,
+                    type: 'upgrade'
+                });
+            }
+        });
+
+        return recommendations;
+    }
+
+    /**
+     * Get complementary features (hardcoded + algorithmic)
+     */
+    private async getComplementaryFeatures(feature: Feature, allFeatures: Feature[]): Promise<Recommendation[]> {
+        const recommendations: Recommendation[] = [];
+
+        // 1. Hardcoded complementary from pattern registry
+        const pattern = this.patternRegistry.getPattern(feature.id);
+        if (pattern?.complementary) {
+            for (const compId of pattern.complementary.slice(0, 3)) {
+                const compFeature = this.index.getFeature(compId);
+                if (compFeature && this.isWidelySupported(compFeature)) {
+                    recommendations.push({
+                        feature: compFeature,
+                        reason: `Works well with ${feature.name || feature.id}`,
+                        confidence: 0.85,
+                        type: 'complementary'
+                    });
+                }
+            }
+        }
+
+        // 2. Algorithmic complementary
+        const algorithmicComp = this.similarityEngine.findComplementary(feature, allFeatures, 3);
+
+        algorithmicComp.forEach(comp => {
+            const compFeature = this.index.getFeature(comp.featureId)!;
+
+            // Don't duplicate hardcoded complementary
+            if (!recommendations.find(r => r.feature.id === compFeature.id)) {
+                recommendations.push({
+                    feature: compFeature,
+                    reason: `Related feature in same category${comp.reasons.length > 0 ? ': ' + comp.reasons.join(', ') : ''}`,
+                    confidence: Math.min(0.75, comp.score),
+                    type: 'complementary'
+                });
+            }
+        });
+
+        return recommendations;
+    }
+
+    /**
+     * Get context-specific recommendations
+     */
+    private async getContextualRecommendations(
+        feature: Feature,
+        context: RecommendationContext,
+        allFeatures: Feature[]
+    ): Promise<Recommendation[]> {
+        const recommendations: Recommendation[] = [];
+
+        // Language-specific recommendations
+        if (context.documentLanguage === 'css' || context.documentLanguage === 'scss') {
+            // Recommend modern CSS features
+            const cssModernFeatures = ['custom-properties', 'calc', 'clamp', 'grid', 'flexbox'];
+
+            cssModernFeatures.forEach(featureId => {
+                if (featureId !== feature.id) {
+                    const modernFeature = this.index.getFeature(featureId);
+                    if (modernFeature && this.isWidelySupported(modernFeature)) {
+                        recommendations.push({
+                            feature: modernFeature,
+                            reason: 'Modern CSS feature for better layouts',
+                            confidence: 0.6,
+                            type: 'contextual'
+                        });
+                    }
+                }
+            });
+        }
+
+        // Only return top 2 contextual recommendations
+        return recommendations.slice(0, 2);
+    }
+
+    /**
+     * Rank recommendations by type and confidence
+     */
+    private rankRecommendations(recommendations: Recommendation[]): Recommendation[] {
+        // Remove duplicates
+        const unique = new Map<string, Recommendation>();
+        recommendations.forEach(rec => {
+            const existing = unique.get(rec.feature.id);
+            if (!existing || rec.confidence > existing.confidence) {
+                unique.set(rec.feature.id, rec);
+            }
+        });
+
+        // Sort by priority: alternatives > upgrades > complementary > contextual
+        const typePriority: Record<string, number> = {
+            'alternative': 4,
+            'upgrade': 3,
+            'complementary': 2,
+            'contextual': 1
+        };
+
+        return Array.from(unique.values())
+            .sort((a, b) => {
+                // First by type priority
+                const aPriority = typePriority[a.type || 'contextual'] || 0;
+                const bPriority = typePriority[b.type || 'contextual'] || 0;
+
+                if (aPriority !== bPriority) {
+                    return bPriority - aPriority;
+                }
+
+                // Then by confidence
+                return b.confidence - a.confidence;
+            })
+            .slice(0, 10); // Max 10 recommendations
     }
 
     private isWidelySupported(feature: Feature): boolean {
-        return feature.status?.baseline === 'widely';
+        const baseline = feature.status?.baseline;
+        // Only 'widely' is considered widely supported
+        return baseline === 'widely';
     }
 
     private isLimitedSupport(feature: Feature): boolean {
         const baseline = feature.status?.baseline;
-        return baseline === 'limited' || baseline === false;
+        return baseline === 'limited' || baseline === false || baseline === undefined;
     }
 
-    private isNewerThan(f1: Feature, f2: Feature): boolean {
-        const date1 = f1.status?.baseline_low_date;
-        const date2 = f2.status?.baseline_low_date;
-        if (!date1 || !date2) return false;
-        return new Date(date1) > new Date(date2);
+    private getCacheKey(context: RecommendationContext): string {
+        return `${context.currentFeature}_${context.documentLanguage}_${context.projectType || 'default'}`;
     }
 }

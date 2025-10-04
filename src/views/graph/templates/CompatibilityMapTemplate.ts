@@ -28,8 +28,13 @@ export class CompatibilityMapTemplate {
     }
 
     private calculateStats(graphData: GraphData) {
+        const cssFeatures = graphData.nodes.filter(n => n.category === 'css');
+        const jsFeatures = graphData.nodes.filter(n => n.category === 'js' || n.category === 'api');
+        
         return {
             total: graphData.nodes.length,
+            css: cssFeatures.length,
+            js: jsFeatures.length,
             widely: graphData.nodes.filter(n => n.status === 'widely').length,
             newly: graphData.nodes.filter(n => n.status === 'newly').length,
             limited: graphData.nodes.filter(n => n.status === 'limited').length,
@@ -61,7 +66,7 @@ export class CompatibilityMapTemplate {
                             <span class="step-icon">👆</span>
                             <div>
                                 <strong>Click nodes</strong>
-                                <p>Click on any feature to see details and recommendations</p>
+                                <p>Click on any feature to see details and smart recommendations</p>
                             </div>
                         </div>
                         <div class="tutorial-step">
@@ -368,6 +373,30 @@ export class CompatibilityMapTemplate {
                 text-align: center;
             }
             
+            /* Loading State */
+            .loading-recommendations {
+                text-align: center;
+                padding: 20px;
+                opacity: 0.7;
+                font-size: 14px;
+            }
+            
+            .spinner {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                border-top-color: #667eea;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
             /* Recommendations */
             #recommendations {
                 margin-top: 20px;
@@ -384,12 +413,27 @@ export class CompatibilityMapTemplate {
                 font-size: 14px;
             }
             
+            .recommendation-section {
+                margin-bottom: 16px;
+            }
+            
+            .section-label {
+                font-size: 11px;
+                opacity: 0.7;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            
             .recommendation-card {
                 background: rgba(102, 126, 234, 0.1);
                 border: 1px solid rgba(102, 126, 234, 0.3);
                 border-radius: 10px;
                 padding: 12px;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
                 cursor: pointer;
                 transition: all 0.3s;
             }
@@ -399,13 +443,48 @@ export class CompatibilityMapTemplate {
                 transform: translateX(4px);
             }
             
+            .recommendation-card.alternative {
+                border-color: rgba(76, 175, 80, 0.4);
+                background: rgba(76, 175, 80, 0.1);
+            }
+            
+            .recommendation-card.upgrade {
+                border-color: rgba(33, 150, 243, 0.4);
+                background: rgba(33, 150, 243, 0.1);
+            }
+            
+            .recommendation-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+            }
+            
+            .recommendation-icon {
+                font-size: 16px;
+            }
+            
             .recommendation-name {
                 font-weight: 600;
+                flex: 1;
+            }
+            
+            .confidence-badge {
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.1);
+                opacity: 0.8;
+            }
+            
+            .recommendation-reason {
+                font-size: 12px;
+                opacity: 0.8;
                 margin-bottom: 4px;
             }
             
-            .recommendation-info {
-                font-size: 12px;
+            .recommendation-status {
+                font-size: 11px;
                 opacity: 0.7;
             }
             
@@ -459,6 +538,7 @@ export class CompatibilityMapTemplate {
                 border-radius: 12px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 font-size: 13px;
+                min-width: 200px;
             }
             
             .stat-row {
@@ -475,6 +555,12 @@ export class CompatibilityMapTemplate {
             .stat-value {
                 font-weight: 600;
                 color: #667eea;
+            }
+            
+            .stat-divider {
+                height: 1px;
+                background: rgba(255, 255, 255, 0.1);
+                margin: 8px 0;
             }
             
             /* Action Buttons */
@@ -541,7 +627,7 @@ export class CompatibilityMapTemplate {
                 </div>
                 
                 <div id="search-container">
-                    <input type="text" id="search" placeholder="Search features (e.g., grid, flexbox)..." />
+                    <input type="text" id="search" placeholder="Search features (e.g., grid, fetch)..." />
                     <span class="search-icon">🔍</span>
                 </div>
                 
@@ -552,8 +638,8 @@ export class CompatibilityMapTemplate {
                 </div>
                 
                 <div id="recommendations">
-                    <div class="recommendations-title">💡 Recommendations</div>
-                    <div id="recommendations-list"></div>
+                    <div class="recommendations-title">💡 Smart Recommendations</div>
+                    <div id="recommendations-content"></div>
                 </div>
                 
                 <div class="action-buttons">
@@ -597,6 +683,16 @@ export class CompatibilityMapTemplate {
                     <span class="stat-label">Total Features:</span>
                     <span class="stat-value">${stats.total}</span>
                 </div>
+                <div class="stat-divider"></div>
+                <div class="stat-row">
+                    <span class="stat-label">CSS Features:</span>
+                    <span class="stat-value">${stats.css}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">JS Features:</span>
+                    <span class="stat-value">${stats.js}</span>
+                </div>
+                <div class="stat-divider"></div>
                 <div class="stat-row">
                     <span class="stat-label">Widely Available:</span>
                     <span class="stat-value">${stats.widely}</span>
@@ -627,6 +723,7 @@ export class CompatibilityMapTemplate {
             let dragStart = { x: 0, y: 0 };
             let currentMode = 'compatibility';
             let searchQuery = '';
+            let currentRecommendations = null;
             
             // Canvas setup
             function resizeCanvas() {
@@ -765,7 +862,7 @@ export class CompatibilityMapTemplate {
                 ctx.globalAlpha = 1.0;
             }
             
-            // Mouse interactions - FIX: Proper drag handling
+            // Mouse interactions - FIXED drag handling
             canvas.addEventListener('mousedown', (e) => {
                 if (hoveredNode) {
                     selectNode(hoveredNode);
@@ -785,7 +882,6 @@ export class CompatibilityMapTemplate {
                 const y = (e.clientY - rect.top - canvas.height / 2 - camera.y) / camera.zoom;
                 
                 if (isDragging) {
-                    // FIX: Proper camera update during drag
                     camera.x = e.clientX - dragStart.x;
                     camera.y = e.clientY - dragStart.y;
                 } else {
@@ -819,7 +915,7 @@ export class CompatibilityMapTemplate {
                 camera.zoom = Math.max(0.5, Math.min(3, camera.zoom * delta));
             });
             
-            // Node selection - FIX: Show proper details
+            // Node selection - SHOW DETAILS AND REQUEST RECOMMENDATIONS
             function selectNode(node) {
                 selectedNode = node;
                 
@@ -846,24 +942,23 @@ export class CompatibilityMapTemplate {
                     browserGrid.innerHTML = '<div class="browser-chip" style="grid-column: 1/-1;">Browser data not available</div>';
                 }
                 
-                // Request recommendations
+                // Show loading state for recommendations
+                const recsContainer = document.getElementById('recommendations');
+                const recsContent = document.getElementById('recommendations-content');
+                recsContainer.classList.add('visible');
+                recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading smart recommendations...</div>';
+                
+                // Request recommendations from extension
                 vscode.postMessage({
-                    command: 'getFeatureDetails',
-                    featureId: node.id
+                    command: 'getRecommendations',
+                    featureId: node.id,
+                    languageId: node.category || 'css'
                 });
             }
             
-            // Search functionality - FIX: Highlight matches instead of dimming everything
+            // Search functionality - HIGHLIGHT matches
             document.getElementById('search').addEventListener('input', (e) => {
                 searchQuery = e.target.value.toLowerCase().trim();
-                
-                if (!searchQuery) {
-                    // Clear search
-                    graphData.nodes.forEach(node => {
-                        node.dimmed = false;
-                    });
-                }
-                // The render loop will handle highlighting based on searchQuery
             });
             
             // View mode switching
@@ -952,57 +1047,115 @@ export class CompatibilityMapTemplate {
                 });
             }
             
-            // Handle messages from extension - FIX: Show recommendations properly
+            // Handle messages from extension - RECEIVE RECOMMENDATIONS
             window.addEventListener('message', event => {
                 const message = event.data;
                 switch (message.command) {
-                    case 'showDetails':
-                        showRecommendations(message.feature, message.similar);
+                    case 'showRecommendations':
+                        displayRecommendations(message.recommendations);
                         break;
                 }
             });
             
-            function showRecommendations(feature, similar) {
-                const container = document.getElementById('recommendations');
-                const listContainer = document.getElementById('recommendations-list');
+            function displayRecommendations(recommendations) {
+                const container = document.getElementById('recommendations-content');
                 
-                if (!similar || similar.length === 0) {
-                    container.classList.remove('visible');
+                if (!recommendations || recommendations.length === 0) {
+                    container.innerHTML = '<div style="opacity: 0.7; font-size: 13px;">No recommendations available</div>';
                     return;
                 }
                 
-                container.classList.add('visible');
-                listContainer.innerHTML = '';
+                // Group by type
+                const grouped = {
+                    alternative: [],
+                    upgrade: [],
+                    complementary: [],
+                    contextual: []
+                };
                 
-                similar.slice(0, 5).forEach(rec => {
-                    const card = document.createElement('div');
-                    card.className = 'recommendation-card';
-                    
-                    const name = document.createElement('div');
-                    name.className = 'recommendation-name';
-                    name.textContent = rec.name || rec.id;
-                    
-                    const info = document.createElement('div');
-                    info.className = 'recommendation-info';
-                    const status = rec.status?.baseline || rec.status?.baseline_status || 'Unknown';
-                    info.textContent = \`Status: \${status} • Click to explore\`;
-                    
-                    card.appendChild(name);
-                    card.appendChild(info);
-                    
-                    card.onclick = () => {
-                        const node = graphData.nodes.find(n => n.id === rec.id);
-                        if (node) {
-                            selectNode(node);
-                            // Zoom to node
-                            camera.x = -node.x * camera.zoom + canvas.width / 2 - 200;
-                            camera.y = -node.y * camera.zoom + canvas.height / 2;
-                            camera.zoom = 1.5;
-                        }
-                    };
-                    
-                    listContainer.appendChild(card);
+                recommendations.forEach(rec => {
+                    const type = rec.type || 'contextual';
+                    if (grouped[type]) {
+                        grouped[type].push(rec);
+                    }
                 });
+                
+                container.innerHTML = '';
+                
+                // Render each group
+                const sections = [
+                    { key: 'alternative', icon: '🔄', label: 'Better Alternatives' },
+                    { key: 'upgrade', icon: '🚀', label: 'Upgrades' },
+                    { key: 'complementary', icon: '🤝', label: 'Works Well With' },
+                    { key: 'contextual', icon: '🔗', label: 'Related' }
+                ];
+                
+                sections.forEach(section => {
+                    const recs = grouped[section.key];
+                    if (recs && recs.length > 0) {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'recommendation-section';
+                        
+                        const label = document.createElement('div');
+                        label.className = 'section-label';
+                        label.innerHTML = \`<span>\${section.icon}</span> \${section.label}\`;
+                        sectionDiv.appendChild(label);
+                        
+                        recs.forEach(rec => {
+                            const card = createRecommendationCard(rec, section.key);
+                            sectionDiv.appendChild(card);
+                        });
+                        
+                        container.appendChild(sectionDiv);
+                    }
+                });
+            }
+            
+            function createRecommendationCard(rec, type) {
+                const card = document.createElement('div');
+                card.className = \`recommendation-card \${type}\`;
+                
+                const header = document.createElement('div');
+                header.className = 'recommendation-header';
+                
+                const name = document.createElement('div');
+                name.className = 'recommendation-name';
+                name.textContent = rec.feature.name || rec.feature.id;
+                
+                const confidence = document.createElement('div');
+                confidence.className = 'confidence-badge';
+                confidence.textContent = Math.round(rec.confidence * 100) + '%';
+                
+                header.appendChild(name);
+                header.appendChild(confidence);
+                
+                const reason = document.createElement('div');
+                reason.className = 'recommendation-reason';
+                reason.textContent = rec.reason;
+                
+                const status = document.createElement('div');
+                status.className = 'recommendation-status';
+                const baseline = rec.feature.status?.baseline || 'unknown';
+                const emoji = baseline === 'widely' ? '✅' : baseline === 'newly' ? '⚠️' : '❌';
+                status.textContent = \`\${emoji} \${baseline} • Click to view\`;
+                
+                card.appendChild(header);
+                card.appendChild(reason);
+                card.appendChild(status);
+                
+                // Click handler
+                card.onclick = () => {
+                    const node = graphData.nodes.find(n => n.id === rec.feature.id);
+                    if (node) {
+                        selectNode(node);
+                        // Zoom to node
+                        camera.x = -node.x * camera.zoom + canvas.width / 2 - 200;
+                        camera.y = -node.y * camera.zoom + canvas.height / 2;
+                        camera.zoom = 1.5;
+                    }
+                };
+                
+                return card;
             }
             
             function resetView() {
@@ -1012,9 +1165,6 @@ export class CompatibilityMapTemplate {
                 document.getElementById('search').value = '';
                 document.getElementById('selected-feature').classList.remove('visible');
                 document.getElementById('recommendations').classList.remove('visible');
-                graphData.nodes.forEach(node => {
-                    node.dimmed = false;
-                });
                 layoutByCompatibility();
             }
             

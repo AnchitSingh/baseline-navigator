@@ -1,18 +1,35 @@
 import * as vscode from 'vscode';
 import { InvertedIndex } from '../core/InvertedIndex';
+import { ConfigurationManager } from '../core/ConfigurationManager';
 import { Feature } from '../types';
 
 export class BaselineHoverProvider implements vscode.HoverProvider {
     private cache = new Map<string, vscode.Hover>();
-    private cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    private cacheTimeout: number;
 
-    constructor(private index: InvertedIndex) {}
+    constructor(
+        private index: InvertedIndex,
+        private configManager: ConfigurationManager
+    ) {
+        this.cacheTimeout = configManager.getConfiguration().cacheTimeout;
+        
+        // Update cache timeout on config change
+        configManager.onDidChange((config) => {
+            this.cacheTimeout = config.cacheTimeout;
+        });
+    }
 
     async provideHover(
         document: vscode.TextDocument,
         position: vscode.Position,
         token: vscode.CancellationToken
     ): Promise<vscode.Hover | undefined> {
+        const config = this.configManager.getConfiguration();
+        
+        if (!config.enabled || !config.enableHoverInfo) {
+            return undefined;
+        }
+        
         const range = document.getWordRangeAtPosition(position);
         if (!range) return;
 
@@ -44,6 +61,8 @@ export class BaselineHoverProvider implements vscode.HoverProvider {
         md.supportHtml = true;
 
         const status = this.getStatusInfo(feature);
+        const config = this.configManager.getConfiguration();
+        const targetBrowsers = config.targetBrowsers;
         
         md.appendMarkdown(`## ${status.icon} ${feature.name || feature.id}\n\n`);
         md.appendMarkdown(`**Status:** ${status.label} ${status.badge}\n\n`);
@@ -54,16 +73,18 @@ export class BaselineHoverProvider implements vscode.HoverProvider {
             md.appendMarkdown(`${feature.description}\n\n`);
         }
 
-        // Browser support table
+        // Browser support table (filtered by target browsers)
         if (feature.status?.support) {
-            md.appendMarkdown(`### Browser Support\n\n`);
+            md.appendMarkdown(`### Browser Support (Your Targets)\n\n`);
             md.appendMarkdown(`| Browser | Version |\n`);
             md.appendMarkdown(`|---------|--------|\n`);
             
-            Object.entries(feature.status.support).forEach(([browser, version]) => {
-                const icon = this.getBrowserIcon(browser);
-                md.appendMarkdown(`| ${icon} ${browser} | ${version}+ |\n`);
-            });
+            Object.entries(feature.status.support)
+                .filter(([browser]) => targetBrowsers.includes(browser))
+                .forEach(([browser, version]) => {
+                    const icon = this.getBrowserIcon(browser);
+                    md.appendMarkdown(`| ${icon} ${browser} | ${version}+ |\n`);
+                });
             md.appendMarkdown(`\n`);
         }
 

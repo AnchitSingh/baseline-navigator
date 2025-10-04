@@ -1,12 +1,14 @@
 {
   "name": "baseline-navigator",
-  "displayName": "baseline-navigator",
+  "displayName": "Baseline Navigator",
   "description": "Smart web platform feature recommendations with beautiful visualizations",
   "repository": {
     "type": "git",
     "url": "https://github.com/AnchitSingh/baseline-navigator.git"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "publisher": "your-publisher-name",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -15,13 +17,17 @@
     "Programming Languages",
     "Visualization"
   ],
+  "keywords": [
+    "css",
+    "javascript",
+    "compatibility",
+    "baseline",
+    "web-features",
+    "browser-support",
+    "recommendations"
+  ],
   "activationEvents": [
-    "onLanguage:css",
-    "onLanguage:scss",
-    "onLanguage:less",
-    "onLanguage:javascript",
-    "onLanguage:typescript",
-    "onLanguage:html"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -49,49 +55,216 @@
         "title": "Quick Compatibility Check",
         "category": "Baseline",
         "icon": "$(shield)"
+      },
+      {
+        "command": "baseline-navigator.configure",
+        "title": "Configure Browser Targets",
+        "category": "Baseline",
+        "icon": "$(settings-gear)"
       }
     ],
     "configuration": {
       "title": "Baseline Navigator",
       "properties": {
+        "baseline-navigator.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable Baseline Navigator",
+          "order": 1
+        },
         "baseline-navigator.checkOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically check compatibility when saving files"
+          "description": "Automatically check compatibility when saving files",
+          "order": 2
         },
-        "baseline-navigator.showStatusBar": {
+        "baseline-navigator.targetBrowsers": {
+          "type": "array",
+          "default": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "description": "Target browsers for compatibility checking",
+          "items": {
+            "type": "string",
+            "enum": [
+              "chrome",
+              "firefox",
+              "safari",
+              "edge",
+              "opera",
+              "samsung_internet"
+            ]
+          },
+          "order": 3
+        },
+        "baseline-navigator.minimumBrowserVersions": {
+          "type": "object",
+          "default": {
+            "chrome": "90",
+            "firefox": "88",
+            "safari": "14",
+            "edge": "90"
+          },
+          "description": "Minimum browser versions to support",
+          "order": 4
+        },
+        "baseline-navigator.riskTolerance": {
+          "type": "string",
+          "default": "moderate",
+          "enum": [
+            "strict",
+            "moderate",
+            "permissive"
+          ],
+          "enumDescriptions": [
+            "Warn about newly available features (strictest)",
+            "Only warn about limited support features (balanced)",
+            "Only warn about unsupported features (permissive)"
+          ],
+          "description": "How strict to be about feature warnings",
+          "order": 5
+        },
+        "baseline-navigator.showRecommendations": {
           "type": "boolean",
           "default": true,
-          "description": "Show Baseline Navigator in status bar"
+          "description": "Show alternative feature recommendations",
+          "order": 6
+        },
+        "baseline-navigator.maxRecommendations": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Maximum number of recommendations to show",
+          "order": 7
         },
         "baseline-navigator.recommendationConfidence": {
           "type": "number",
           "default": 0.7,
           "minimum": 0,
           "maximum": 1,
-          "description": "Minimum confidence level for showing recommendations"
+          "description": "Minimum confidence level for showing recommendations (0.0 - 1.0)",
+          "order": 8
+        },
+        "baseline-navigator.diagnosticSeverity": {
+          "type": "object",
+          "default": {
+            "limited": "Warning",
+            "newly": "Information",
+            "unknown": "Information"
+          },
+          "description": "Severity level for diagnostics by feature status",
+          "properties": {
+            "limited": {
+              "type": "string",
+              "enum": [
+                "Error",
+                "Warning",
+                "Information",
+                "Hint"
+              ]
+            },
+            "newly": {
+              "type": "string",
+              "enum": [
+                "Error",
+                "Warning",
+                "Information",
+                "Hint"
+              ]
+            },
+            "unknown": {
+              "type": "string",
+              "enum": [
+                "Error",
+                "Warning",
+                "Information",
+                "Hint"
+              ]
+            }
+          },
+          "order": 9
+        },
+        "baseline-navigator.enableHoverInfo": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show feature information on hover",
+          "order": 10
+        },
+        "baseline-navigator.enableCodeActions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Suggest alternative features via code actions (lightbulb)",
+          "order": 11
+        },
+        "baseline-navigator.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Baseline Navigator in status bar",
+          "order": 12
+        },
+        "baseline-navigator.cacheTimeout": {
+          "type": "number",
+          "default": 300000,
+          "description": "Cache timeout in milliseconds (default: 5 minutes)",
+          "order": 13
         }
       }
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "baseline-navigator.showGraph",
+          "when": "true"
+        },
+        {
+          "command": "baseline-navigator.checkCompatibility",
+          "when": "editorLangId == css || editorLangId == scss || editorLangId == less || editorLangId == javascript || editorLangId == typescript"
+        },
+        {
+          "command": "baseline-navigator.analyzeProject",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "baseline-navigator.quickProjectCheck",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "baseline-navigator.configure",
+          "when": "true"
+        }
+      ],
       "editor/context": [
         {
           "command": "baseline-navigator.checkCompatibility",
-          "group": "baseline",
-          "when": "resourceExtname == .css || resourceExtname == .scss"
+          "group": "baseline@1",
+          "when": "resourceExtname == .css || resourceExtname == .scss || resourceExtname == .js || resourceExtname == .ts"
         }
       ],
       "explorer/context": [
         {
           "command": "baseline-navigator.analyzeProject",
-          "group": "baseline",
+          "group": "baseline@1",
           "when": "explorerResourceIsFolder"
         }
       ],
       "editor/title": [
         {
           "command": "baseline-navigator.quickProjectCheck",
-          "group": "navigation"
+          "group": "navigation@1",
+          "when": "config.baseline-navigator.showStatusBar"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "baseline-navigator",
+          "title": "Baseline Navigator",
+          "icon": "$(telescope)"
         }
       ]
     }
@@ -100,7 +273,12 @@
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
-    "package": "webpack --mode production --devtool hidden-source-map"
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",

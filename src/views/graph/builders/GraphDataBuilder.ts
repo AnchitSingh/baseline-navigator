@@ -8,9 +8,26 @@ export class GraphDataBuilder {
         const edges: GraphEdge[] = [];
         const nodeMap = new Map<string, GraphNode>();
 
-        // Create nodes
+        // Create nodes - INCLUDE CATEGORY
         features.slice(0, 100).forEach(feature => {
             const status = getFeatureStatus(feature);
+            
+            // Determine category from spec or ID patterns
+            let category = 'css';
+            if (feature.spec?.category) {
+                category = 'css'; // Most web-features are CSS
+            }
+            // Detect JS features
+            if (feature.id.includes('api') || 
+                feature.id.includes('observer') || 
+                feature.id.includes('promise') ||
+                feature.id.includes('async') ||
+                feature.id.includes('fetch') ||
+                feature.id.includes('custom-elements') ||
+                feature.id.includes('shadow')) {
+                category = 'js';
+            }
+            
             const node: GraphNode = {
                 id: feature.id,
                 label: feature.name || feature.id,
@@ -19,7 +36,7 @@ export class GraphDataBuilder {
                 radius: status.size,
                 color: status.color,
                 status: status.key,
-                category: feature.spec?.category || feature.group || 'general',
+                category: category, // ADD THIS
                 browsers: feature.status?.support,
                 baselineDate: feature.status?.baseline_low_date,
                 dimmed: false

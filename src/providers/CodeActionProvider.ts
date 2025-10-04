@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
 import { InvertedIndex } from '../core/InvertedIndex';
 import { RecommendationEngine } from '../core/RecommendationEngine';
+import { ConfigurationManager } from '../core/ConfigurationManager';
 
 export class BaselineCodeActionProvider implements vscode.CodeActionProvider {
     private recommendationEngine: RecommendationEngine;
 
-    constructor(private index: InvertedIndex) {
+    constructor(
+        private index: InvertedIndex,
+        private configManager: ConfigurationManager
+    ) {
         this.recommendationEngine = new RecommendationEngine(index);
     }
 
@@ -15,6 +19,12 @@ export class BaselineCodeActionProvider implements vscode.CodeActionProvider {
         context: vscode.CodeActionContext,
         token: vscode.CancellationToken
     ): Promise<vscode.CodeAction[]> {
+        const config = this.configManager.getConfiguration();
+        
+        if (!config.enabled || !config.enableCodeActions || !config.showRecommendations) {
+            return [];
+        }
+        
         const actions: vscode.CodeAction[] = [];
         const word = document.getText(range);
         
@@ -27,12 +37,15 @@ export class BaselineCodeActionProvider implements vscode.CodeActionProvider {
         // Get recommendations
         const recommendations = await this.recommendationEngine.getRecommendations({
             currentFeature: feature.id,
-            documentLanguage: document.languageId
+            documentLanguage: document.languageId,
+            targetBrowsers: config.targetBrowsers
         });
 
-        // Create code actions for each recommendation
-        recommendations.slice(0, 3).forEach(rec => {
-            if (rec.confidence > 0.7) {
+        // Create code actions for top recommendations
+        recommendations
+            .slice(0, config.maxRecommendations)
+            .filter(rec => rec.confidence > 0.7)
+            .forEach(rec => {
                 const action = new vscode.CodeAction(
                     `💡 ${rec.reason}`,
                     vscode.CodeActionKind.QuickFix
@@ -48,24 +61,7 @@ export class BaselineCodeActionProvider implements vscode.CodeActionProvider {
                 };
                 
                 actions.push(action);
-            }
-        });
-
-        // Add refactor action for alternatives
-        if (recommendations.some(r => r.alternatives)) {
-            const refactorAction = new vscode.CodeAction(
-                '🔄 Show all alternatives',
-                vscode.CodeActionKind.Refactor
-            );
-            
-            refactorAction.command = {
-                command: 'baseline-navigator.showAlternatives',
-                title: 'Show Alternatives',
-                arguments: [feature, recommendations]
-            };
-            
-            actions.push(refactorAction);
-        }
+            });
 
         // Add documentation action
         const docAction = new vscode.CodeAction(

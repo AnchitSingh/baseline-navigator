@@ -1,36 +1,29 @@
 import * as vscode from 'vscode';
 import { InvertedIndex } from '../core/InvertedIndex';
+import { FeaturePatternRegistry } from '../core/FeaturePatternRegistry';
+import { ConfigurationManager } from '../core/ConfigurationManager';
 import { Feature } from '../types';
 
 export class BaselineDiagnosticProvider {
     private diagnosticCollection: vscode.DiagnosticCollection;
-    private cssFeaturePatterns: Map<string, RegExp> = new Map(); // Initialize here
+    private patternRegistry: FeaturePatternRegistry;
 
-    constructor(private index: InvertedIndex) {
+    constructor(
+        private index: InvertedIndex,
+        private configManager: ConfigurationManager
+    ) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('baseline');
-        this.initializePatterns();
-    }
-
-    private initializePatterns() {
-        // Now this adds to the already initialized Map
-        this.cssFeaturePatterns.set('grid', /display:\s*grid/gi);
-        this.cssFeaturePatterns.set('subgrid', /grid-template-(rows|columns):\s*subgrid/gi);
-        this.cssFeaturePatterns.set('flexbox', /display:\s*flex/gi);
-        this.cssFeaturePatterns.set('container-queries', /@container/gi);
-        this.cssFeaturePatterns.set('css-has', /:has\([^)]+\)/gi);
-        this.cssFeaturePatterns.set('aspect-ratio', /aspect-ratio:/gi);
-        this.cssFeaturePatterns.set('gap', /gap:/gi);
-        this.cssFeaturePatterns.set('custom-properties', /--[\w-]+:/gi);
-        this.cssFeaturePatterns.set('calc', /calc\([^)]+\)/gi);
-        this.cssFeaturePatterns.set('clamp', /clamp\([^)]+\)/gi);
-        this.cssFeaturePatterns.set('min', /min\([^)]+\)/gi);
-        this.cssFeaturePatterns.set('max', /max\([^)]+\)/gi);
-        this.cssFeaturePatterns.set('scroll-snap', /scroll-snap-type:/gi);
-        this.cssFeaturePatterns.set('sticky', /position:\s*sticky/gi);
-        this.cssFeaturePatterns.set('backdrop-filter', /backdrop-filter:/gi);
+        this.patternRegistry = new FeaturePatternRegistry();
     }
 
     public async updateDiagnostics(document: vscode.TextDocument): Promise<void> {
+        const config = this.configManager.getConfiguration();
+
+        if (!config.enabled) {
+            this.diagnosticCollection.clear();
+            return;
+        }
+
         if (!this.shouldAnalyze(document)) {
             this.diagnosticCollection.clear();
             return;
@@ -39,19 +32,36 @@ export class BaselineDiagnosticProvider {
         const diagnostics: vscode.Diagnostic[] = [];
         const text = document.getText();
 
-        // Analyze CSS features
-        for (const [featureId, pattern] of this.cssFeaturePatterns) {
-            const matches = Array.from(text.matchAll(pattern));
-            
-            for (const match of matches) {
-                const feature = this.index.getFeature(featureId);
-                if (feature && this.shouldWarn(feature)) {
-                    const startPos = document.positionAt(match.index!);
-                    const endPos = document.positionAt(match.index! + match[0].length);
-                    const range = new vscode.Range(startPos, endPos);
-                    
-                    const diagnostic = this.createDiagnostic(range, feature);
-                    diagnostics.push(diagnostic);
+        // Use pattern registry to detect features
+        const detectedFeatures = this.patternRegistry.detectFeatures(text, document.languageId);
+
+        for (const [patternId, matchCount] of detectedFeatures) {
+            // Get feature from index
+            let feature = this.index.getFeature(patternId);
+
+            // Try aliases if not found
+            if (!feature) {
+                const resolvedId = this.patternRegistry.resolveFeatureId(patternId);
+                if (resolvedId) {
+                    feature = this.index.getFeature(resolvedId);
+                }
+            }
+
+            if (feature && this.shouldWarn(feature)) {
+                // Find actual match positions
+                const pattern = this.patternRegistry.getPattern(patternId);
+                if (pattern) {
+                    pattern.patterns.forEach(regex => {
+                        const matches = Array.from(text.matchAll(regex));
+                        matches.forEach(match => {
+                            const startPos = document.positionAt(match.index!);
+                            const endPos = document.positionAt(match.index! + match[0].length);
+                            const range = new vscode.Range(startPos, endPos);
+
+                            const diagnostic = this.createDiagnostic(range, feature!);
+                            diagnostics.push(diagnostic);
+                        });
+                    });
                 }
             }
         }
@@ -71,30 +81,43 @@ export class BaselineDiagnosticProvider {
 
     private createDiagnostic(range: vscode.Range, feature: Feature): vscode.Diagnostic {
         const baseline = feature.status?.baseline;
-        let severity = vscode.DiagnosticSeverity.Information;
         let message = '';
+        let baselineString: string;
 
-        if (baseline === 'limited' || baseline === false) {
-            severity = vscode.DiagnosticSeverity.Warning;
+        // FIX: Convert baseline to string for comparison
+        if (baseline === false) {
+            baselineString = 'limited';
+            message = `⚠️ "${feature.name}" has limited browser support`;
+        } else if (baseline === 'limited') {
+            baselineString = 'limited';
             message = `⚠️ "${feature.name}" has limited browser support`;
         } else if (baseline === 'newly') {
-            severity = vscode.DiagnosticSeverity.Information;
+            baselineString = 'newly';
             message = `ℹ️ "${feature.name}" is newly available (may not work in older browsers)`;
+        } else {
+            baselineString = 'unknown';
+            message = `❓ "${feature.name}" has unknown support status`;
         }
 
+        const severity = this.configManager.getDiagnosticSeverity(baselineString);
         const diagnostic = new vscode.Diagnostic(range, message, severity);
         diagnostic.code = feature.id;
         diagnostic.source = 'Baseline Navigator';
 
         // Add browser support details
         if (feature.status?.support) {
+            const config = this.configManager.getConfiguration();
+            const targetBrowsers = config.targetBrowsers;
+
             const supportInfo = Object.entries(feature.status.support)
+                .filter(([browser]) => targetBrowsers.includes(browser))
                 .map(([browser, version]) => `${browser}: ${version}+`)
                 .join(', ');
+
             diagnostic.relatedInformation = [
                 new vscode.DiagnosticRelatedInformation(
                     new vscode.Location(vscode.Uri.parse('https://web.dev'), range),
-                    `Browser support: ${supportInfo}`
+                    `Browser support (your targets): ${supportInfo || 'Not available for your target browsers'}`
                 )
             ];
         }
