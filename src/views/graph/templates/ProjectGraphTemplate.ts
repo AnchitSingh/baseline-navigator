@@ -66,6 +66,11 @@ export class ProjectGraphTemplate {
             #canvas {
                 width: 100%;
                 height: 100%;
+                cursor: grab;
+            }
+            
+            #canvas.dragging {
+                cursor: grabbing;
             }
             
             /* Score Card */
@@ -125,7 +130,7 @@ export class ProjectGraphTemplate {
                 backdrop-filter: blur(10px);
                 padding: 24px;
                 border-radius: 16px;
-                width: 400px;
+                width: 420px;
                 max-height: 90vh;
                 overflow-y: auto;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -198,6 +203,8 @@ export class ProjectGraphTemplate {
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
+                max-height: 250px;
+                overflow-y: auto;
             }
             
             .feature-item {
@@ -217,6 +224,7 @@ export class ProjectGraphTemplate {
             .feature-item.selected {
                 border-color: ${scoreColor};
                 background: rgba(255, 255, 255, 0.15);
+                box-shadow: 0 0 0 2px ${scoreColor}33;
             }
             
             .feature-name {
@@ -259,6 +267,130 @@ export class ProjectGraphTemplate {
                 background: rgba(76, 175, 80, 0.3);
                 color: #4CAF50;
                 border: 1px solid #4CAF50;
+            }
+            
+            /* Recommendations Panel */
+            .recommendations-panel {
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                display: none;
+            }
+            
+            .recommendations-panel.visible {
+                display: block;
+                animation: slideIn 0.3s ease;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .recommendations-header {
+                font-weight: 600;
+                font-size: 16px;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .rec-section {
+                margin-bottom: 16px;
+            }
+            
+            .rec-section-label {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                opacity: 0.7;
+                margin-bottom: 8px;
+            }
+            
+            .rec-card {
+                background: rgba(102, 126, 234, 0.1);
+                border: 1px solid rgba(102, 126, 234, 0.3);
+                border-radius: 8px;
+                padding: 10px;
+                margin-bottom: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .rec-card:hover {
+                background: rgba(102, 126, 234, 0.2);
+                transform: translateX(4px);
+            }
+            
+            .rec-card.alternative {
+                border-color: rgba(76, 175, 80, 0.4);
+                background: rgba(76, 175, 80, 0.1);
+            }
+            
+            .rec-card.upgrade {
+                border-color: rgba(33, 150, 243, 0.4);
+                background: rgba(33, 150, 243, 0.1);
+            }
+            
+            .rec-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 4px;
+            }
+            
+            .rec-name {
+                font-weight: 600;
+                font-size: 13px;
+            }
+            
+            .rec-confidence {
+                font-size: 11px;
+                background: rgba(255, 255, 255, 0.1);
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+            
+            .rec-reason {
+                font-size: 12px;
+                opacity: 0.8;
+                margin-bottom: 4px;
+                line-height: 1.4;
+            }
+            
+            .rec-status {
+                font-size: 11px;
+                opacity: 0.7;
+            }
+            
+            .loading-recommendations {
+                text-align: center;
+                padding: 20px;
+                opacity: 0.7;
+                font-size: 14px;
+            }
+            
+            .spinner {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                border-top-color: #667eea;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
             }
             
             /* Suggestions */
@@ -381,21 +513,25 @@ export class ProjectGraphTemplate {
             }
             
             /* Scrollbar */
-            #controls::-webkit-scrollbar {
+            #controls::-webkit-scrollbar,
+            .feature-list::-webkit-scrollbar {
                 width: 6px;
             }
             
-            #controls::-webkit-scrollbar-track {
+            #controls::-webkit-scrollbar-track,
+            .feature-list::-webkit-scrollbar-track {
                 background: rgba(255, 255, 255, 0.05);
                 border-radius: 3px;
             }
             
-            #controls::-webkit-scrollbar-thumb {
+            #controls::-webkit-scrollbar-thumb,
+            .feature-list::-webkit-scrollbar-thumb {
                 background: rgba(255, 255, 255, 0.2);
                 border-radius: 3px;
             }
             
-            #controls::-webkit-scrollbar-thumb:hover {
+            #controls::-webkit-scrollbar-thumb:hover,
+            .feature-list::-webkit-scrollbar-thumb:hover {
                 background: rgba(255, 255, 255, 0.3);
             }
             
@@ -405,6 +541,38 @@ export class ProjectGraphTemplate {
                 padding: 20px;
                 opacity: 0.7;
                 font-size: 14px;
+            }
+
+            .feature-item {
+                background: rgba(255, 255, 255, 0.05);
+                padding: 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s;
+                border: 1px solid transparent;
+                position: relative;
+            }
+
+            .feature-item:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateX(4px);
+            }
+
+            .feature-item:hover::after {
+                content: "Click for recommendations";
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 10px;
+                opacity: 0.5;
+                pointer-events: none;
+            }
+
+            .feature-item.selected {
+                border-color: ${scoreColor};
+                background: rgba(255, 255, 255, 0.15);
+                box-shadow: 0 0 0 2px ${scoreColor}33;
             }
         `;
     }
@@ -447,107 +615,20 @@ export class ProjectGraphTemplate {
                     <input type="text" id="search" placeholder="Search your features..." />
                 </div>
                 
-                ${this.getRiskFeaturesSection(analysis)}
-                ${this.getSafeFeaturesSection(analysis)}
+                <!-- Recommendations Panel -->
+                <div id="recommendations-panel" class="recommendations-panel">
+                    <div class="recommendations-header">💡 Smart Recommendations</div>
+                    <div id="recommendations-content">
+                        <div class="empty-state">Select a feature to see recommendations</div>
+                    </div>
+                </div>
+                
                 ${this.getSuggestionsSection(analysis)}
                 
-                <button class="export-btn" onclick="exportReport()">
-                    📄 Export Report
-                </button>
             </div>
         `;
     }
 
-    private getRiskFeaturesSection(analysis: ProjectAnalysis): string {
-        if (analysis.riskFeatures.length === 0) {
-            return `
-                <div class="analysis-section">
-                    <div class="section-title">
-                        <span>⚠️</span>
-                        <span>Features Needing Attention</span>
-                        <span class="section-badge">0</span>
-                    </div>
-                    <div class="empty-state">
-                        🎉 Great! No risky features found.
-                    </div>
-                </div>
-            `;
-        }
-
-        const features = analysis.riskFeatures.slice(0, 10).map(rf => `
-            <div class="feature-item" data-id="${rf.feature.id}">
-                <div class="feature-name">
-                    ${this.truncateText(rf.feature.name || rf.feature.id, 30)}
-                    <span class="risk-badge risk-high">LIMITED</span>
-                </div>
-                <div class="feature-meta">
-                    <span>📝 ${rf.usageCount} use${rf.usageCount > 1 ? 's' : ''}</span>
-                    <span>📁 ${rf.files.length} file${rf.files.length > 1 ? 's' : ''}</span>
-                </div>
-            </div>
-        `).join('');
-
-        const remaining = analysis.riskFeatures.length - 10;
-        const moreText = remaining > 0 ? `
-            <div class="empty-state" style="margin-top: 8px;">
-                And ${remaining} more...
-            </div>
-        ` : '';
-
-        return `
-            <div class="analysis-section">
-                <div class="section-title">
-                    <span>⚠️</span>
-                    <span>Features Needing Attention</span>
-                    <span class="section-badge">${analysis.riskFeatures.length}</span>
-                </div>
-                <div class="feature-list">
-                    ${features}
-                </div>
-                ${moreText}
-            </div>
-        `;
-    }
-
-    private getSafeFeaturesSection(analysis: ProjectAnalysis): string {
-        if (analysis.safeFeatures.length === 0) {
-            return '';
-        }
-
-        const features = analysis.safeFeatures.slice(0, 8).map(sf => `
-            <div class="feature-item" data-id="${sf.feature.id}">
-                <div class="feature-name">
-                    ${this.truncateText(sf.feature.name || sf.feature.id, 30)}
-                    <span class="risk-badge risk-low">SAFE</span>
-                </div>
-                <div class="feature-meta">
-                    <span>📝 ${sf.usageCount} use${sf.usageCount > 1 ? 's' : ''}</span>
-                    <span>📁 ${sf.files.length} file${sf.files.length > 1 ? 's' : ''}</span>
-                </div>
-            </div>
-        `).join('');
-
-        const remaining = analysis.safeFeatures.length - 8;
-        const moreText = remaining > 0 ? `
-            <div class="empty-state" style="margin-top: 8px;">
-                And ${remaining} more safe features...
-            </div>
-        ` : '';
-
-        return `
-            <div class="analysis-section">
-                <div class="section-title">
-                    <span>✅</span>
-                    <span>Widely Supported Features</span>
-                    <span class="section-badge">${analysis.safeFeatures.length}</span>
-                </div>
-                <div class="feature-list">
-                    ${features}
-                </div>
-                ${moreText}
-            </div>
-        `;
-    }
 
     private getSuggestionsSection(analysis: ProjectAnalysis): string {
         if (analysis.suggestions.length === 0) {
@@ -561,7 +642,7 @@ export class ProjectGraphTemplate {
         return `
             <div class="suggestions">
                 <div class="suggestions-title">
-                    💡 Suggestions
+                    💡 Overall Suggestions
                 </div>
                 ${suggestions}
             </div>
@@ -590,6 +671,8 @@ export class ProjectGraphTemplate {
 
     private getScript(graphData: GraphData, analysis: ProjectAnalysis): string {
         return `
+            console.log('🎯 Project graph script starting...');
+            
             const vscode = acquireVsCodeApi();
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
@@ -625,6 +708,8 @@ export class ProjectGraphTemplate {
                 node.vx = 0;
                 node.vy = 0;
             });
+            
+            console.log('✅ Initialized', simulation.nodes.length, 'nodes');
             
             // Canvas setup
             function resizeCanvas() {
@@ -780,11 +865,159 @@ export class ProjectGraphTemplate {
                 ctx.globalAlpha = 1;
             }
             
+            // Helper to determine language type
+            function determineLanguageType(node) {
+                if (node.category) {
+                    const catStr = Array.isArray(node.category) ? node.category.join(',') : node.category;
+                    if (catStr.includes('javascript') || 
+                        catStr.includes('api') || 
+                        catStr.includes('array') ||
+                        catStr.includes('promise')) {
+                        return 'js';
+                    }
+                }
+                return 'css';
+            }
+            
+            // Node selection - SHOW DETAILS AND REQUEST RECOMMENDATIONS
+            function selectNode(node) {
+                console.log('🎯 Node selected:', node.id, node.label);
+                selectedNode = node;
+                
+                // Zoom to node in graph
+                camera.x = -node.x * camera.zoom + canvas.width / 2 - 220;
+                camera.y = -node.y * camera.zoom + canvas.height / 2;
+                camera.zoom = 1.5;
+                
+                // Highlight in the feature list
+                document.querySelectorAll('.feature-item').forEach(i => {
+                    i.classList.remove('selected');
+                });
+                
+                const listItem = document.querySelector(\`[data-id="\${node.id}"]\`);
+                if (listItem) {
+                    listItem.classList.add('selected');
+                    listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                
+                // Show recommendations panel with loading state
+                const recsPanel = document.getElementById('recommendations-panel');
+                const recsContent = document.getElementById('recommendations-content');
+                
+                recsPanel.classList.add('visible');
+                recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading recommendations...</div>';
+                
+                console.log('📤 Requesting recommendations for:', node.id);
+                
+                // Request recommendations
+                vscode.postMessage({
+                    command: 'getRecommendations',
+                    featureId: node.id,
+                    languageId: determineLanguageType(node)
+                });
+            }
+            
+            // Function to select a feature by ID
+            function selectFeatureById(featureId) {
+                const node = simulation.nodes.find(n => n.id === featureId);
+                if (node) {
+                    selectNode(node);
+                }
+            }
+            
+            // Handle messages from extension
+            window.addEventListener('message', event => {
+                const message = event.data;
+                console.log('📨 Project graph received message:', message.command);
+                
+                switch (message.command) {
+                    case 'showRecommendations':
+                        console.log('💡 Showing recommendations:', message.recommendations);
+                        displayRecommendations(message.recommendations);
+                        break;
+                }
+            });
+            
+            function displayRecommendations(recommendations) {
+                console.log('🎨 Displaying recommendations:', recommendations);
+                
+                const recsContent = document.getElementById('recommendations-content');
+    
+                if (!recommendations || recommendations.length === 0) {
+                    // Better empty state message
+                    recsContent.innerHTML = \`
+                        <div style="opacity: 0.7; font-size: 13px; padding: 12px; text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
+                            <div style="margin-bottom: 8px;">No recommendations found</div>
+                            <div style="font-size: 11px; opacity: 0.7;">
+                                This feature might be very new or have unique characteristics
+                            </div>
+                        </div>
+                    \`;
+                    return;
+                }
+                
+                // Group by type
+                const grouped = {
+                    alternative: [],
+                    upgrade: [],
+                    complementary: [],
+                    contextual: []
+                };
+                
+                recommendations.forEach(rec => {
+                    const type = rec.type || 'contextual';
+                    if (grouped[type]) {
+                        grouped[type].push(rec);
+                    }
+                });
+                
+                let html = '';
+                
+                const sections = [
+                    { key: 'alternative', icon: '🔄', label: 'Better Alternatives' },
+                    { key: 'upgrade', icon: '🚀', label: 'Upgrades' },
+                    { key: 'complementary', icon: '🤝', label: 'Works Well With' },
+                    { key: 'contextual', icon: '🔗', label: 'Related Features' }
+                ];
+                
+                sections.forEach(section => {
+                    const recs = grouped[section.key];
+                    if (recs && recs.length > 0) {
+                        html += \`
+                            <div class="rec-section">
+                                <div class="rec-section-label">\${section.icon} \${section.label}</div>
+                        \`;
+                        
+                        recs.forEach(rec => {
+                            const baseline = rec.feature.status?.baseline || 'unknown';
+                            const emoji = baseline === 'widely' || baseline === 'high' ? '✅' : 
+                                         baseline === 'newly' || baseline === 'low' ? '⚠️' : '❌';
+                            
+                            html += \`
+                                <div class="rec-card \${section.key}" onclick="selectFeatureById('\${rec.feature.id}')">
+                                    <div class="rec-header">
+                                        <div class="rec-name">\${rec.feature.name || rec.feature.id}</div>
+                                        <div class="rec-confidence">\${Math.round(rec.confidence * 100)}%</div>
+                                    </div>
+                                    <div class="rec-reason">\${rec.reason}</div>
+                                    <div class="rec-status">\${emoji} \${baseline}</div>
+                                </div>
+                            \`;
+                        });
+                        
+                        html += '</div>';
+                    }
+                });
+                
+                recsContent.innerHTML = html || '<div class="empty-state">No recommendations found</div>';
+            }
+            
             // Search functionality
             document.getElementById('search').addEventListener('input', (e) => {
-                searchQuery = e.target.value.toLowerCase();
+                searchQuery = e.target.value.toLowerCase().trim();
                 
-                // Highlight matching features
+                // Highlight matching features in the list
                 document.querySelectorAll('.feature-item').forEach(item => {
                     const nameEl = item.querySelector('.feature-name');
                     if (!nameEl) return;
@@ -798,23 +1031,42 @@ export class ProjectGraphTemplate {
                 });
             });
             
-            // Feature item clicks
+            // Feature item clicks - FIX: Request recommendations directly
             document.querySelectorAll('.feature-item').forEach(item => {
                 item.addEventListener('click', () => {
                     const featureId = item.dataset.id;
+                    console.log('📋 Feature item clicked:', featureId);
+                    
+                    // Try to find and select the node in graph
                     const node = simulation.nodes.find(n => n.id === featureId);
+                    
                     if (node) {
-                        selectedNode = node;
-                        camera.x = -node.x * camera.zoom + canvas.width / 2;
-                        camera.y = -node.y * camera.zoom + canvas.height / 2;
-                        camera.zoom = 1.5;
+                        // If node exists in graph, select it (zooms to it)
+                        selectNode(node);
+                    } else {
+                        // If not in graph, still request recommendations directly
+                        console.log('⚠️ Node not in graph, requesting recommendations anyway');
                         
-                        // Scroll to feature in list
+                        // Highlight in the feature list
                         document.querySelectorAll('.feature-item').forEach(i => {
                             i.classList.remove('selected');
                         });
                         item.classList.add('selected');
-                        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        
+                        // Show recommendations panel with loading state
+                        const recsPanel = document.getElementById('recommendations-panel');
+                        const recsContent = document.getElementById('recommendations-content');
+                        
+                        recsPanel.classList.add('visible');
+                        recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading recommendations...</div>';
+                        
+                        // Request recommendations directly
+                        console.log('📤 Requesting recommendations for:', featureId);
+                        vscode.postMessage({
+                            command: 'getRecommendations',
+                            featureId: featureId,
+                            languageId: 'css' // Default, will be auto-detected by engine
+                        });
                     }
                 });
             });
@@ -874,17 +1126,20 @@ export class ProjectGraphTemplate {
                 if (!hoveredNode) {
                     isDragging = true;
                     dragStart = { x: e.clientX - camera.x, y: e.clientY - camera.y };
+                    canvas.classList.add('dragging');
                 } else {
-                    selectedNode = hoveredNode;
-                    selectedNode.fixed = true;
+                    selectNode(hoveredNode);
                 }
             });
             
             canvas.addEventListener('mouseup', () => {
                 isDragging = false;
-                if (selectedNode) {
-                    selectedNode.fixed = false;
-                }
+                canvas.classList.remove('dragging');
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+                canvas.classList.remove('dragging');
             });
             
             canvas.addEventListener('wheel', (e) => {
@@ -918,11 +1173,13 @@ export class ProjectGraphTemplate {
             }
             
             // Start render loop
+            console.log('🎨 Starting render loop...');
             render();
             
             // Stop physics after initial layout
             setTimeout(() => {
                 simulation.running = false;
+                console.log('⏸️ Physics simulation stopped');
             }, 5000);
         `;
     }

@@ -1250,8 +1250,7 @@ window.addEventListener('message', event => {
                 const status = document.createElement('div');
                 status.className = 'recommendation-status';
                 const baseline = rec.feature.status?.baseline || 'unknown';
-                const emoji = baseline === 'widely' ? '✅' : baseline === 'newly' ? '⚠️' : '❌';
-                status.textContent = \`\${emoji} \${baseline} • Click to view\`;
+                status.textContent = \`\${baseline} • Click to view\`;
                 
                 card.appendChild(header);
                 card.appendChild(reason);
