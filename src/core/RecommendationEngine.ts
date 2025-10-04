@@ -15,13 +15,11 @@ export class RecommendationEngine {
     }
 
     public async getRecommendations(context: RecommendationContext): Promise<Recommendation[]> {
-        console.log('🎯 RecommendationEngine.getRecommendations called for:', context.currentFeature);
 
         try {
             await this.index.waitForReady();
-            console.log('✅ Index ready');
+
         } catch (error) {
-            console.error('❌ Index not ready:', error);
             return [];
         }
 
@@ -29,7 +27,6 @@ export class RecommendationEngine {
         const cacheKey = this.getCacheKey(context);
         if (this.recommendationCache.has(cacheKey)) {
             const cached = this.recommendationCache.get(cacheKey)!;
-            console.log('💾 Returning', cached.length, 'cached recommendations');
             return cached;
         }
 
@@ -37,58 +34,39 @@ export class RecommendationEngine {
         const currentFeature = this.index.getFeature(context.currentFeature);
 
         if (!currentFeature) {
-            console.warn('❌ Feature not found:', context.currentFeature);
             return [];
         }
 
-        console.log('📚 Current feature:', currentFeature.name || currentFeature.id);
-        console.log('   Status:', currentFeature.status?.baseline);
-        console.log('   Category:', currentFeature.spec?.category);
 
         const allFeatures = this.index.getAllFeatures();
-        console.log('📊 Total features in index:', allFeatures.length);
 
         // 1. HARDCODED ALTERNATIVES
-        console.log('🔍 Looking for hardcoded alternatives...');
         const hardcodedAlternatives = await this.getHardcodedAlternatives(currentFeature);
-        console.log('   Found', hardcodedAlternatives.length, 'hardcoded alternatives');
         recommendations.push(...hardcodedAlternatives);
 
         // 2. ALGORITHMIC ALTERNATIVES
         if (this.isLimitedSupport(currentFeature)) {
-            console.log('🔍 Feature has limited support, looking for algorithmic alternatives...');
             const algorithmicAlternatives = await this.getAlgorithmicAlternatives(currentFeature, allFeatures);
-            console.log('   Found', algorithmicAlternatives.length, 'algorithmic alternatives');
             recommendations.push(...algorithmicAlternatives);
         }
 
         // 3. UPGRADE PATHS
-        console.log('🔍 Looking for upgrade paths...');
         const upgrades = await this.getUpgradePaths(currentFeature, allFeatures);
-        console.log('   Found', upgrades.length, 'upgrades');
         recommendations.push(...upgrades);
 
         // 4. COMPLEMENTARY FEATURES
-        console.log('🔍 Looking for complementary features...');
         const complementary = await this.getComplementaryFeatures(currentFeature, allFeatures);
-        console.log('   Found', complementary.length, 'complementary features');
         recommendations.push(...complementary);
 
         // 5. CONTEXT-SPECIFIC
-        console.log('🔍 Looking for contextual recommendations...');
         const contextual = await this.getContextualRecommendations(currentFeature, context, allFeatures);
-        console.log('   Found', contextual.length, 'contextual recommendations');
         recommendations.push(...contextual);
 
-        console.log('📊 Total before ranking:', recommendations.length);
 
         // Rank and deduplicate
         const rankedRecommendations = this.rankRecommendations(recommendations);
-        console.log('✅ Final recommendations:', rankedRecommendations.length);
 
-        if (rankedRecommendations.length > 0) {
-            console.log('   Sample:', rankedRecommendations[0]);
-        }
+
 
         // Cache results
         this.recommendationCache.set(cacheKey, rankedRecommendations);
@@ -207,7 +185,6 @@ export class RecommendationEngine {
 
         if (category) {
             const categoryArray = Array.isArray(category) ? category : [category];
-            console.log('   Using categories:', categoryArray);
 
             const categoryFeatures = allFeatures.filter(f => {
                 const fCategory = f.spec?.category || f.group;
@@ -221,11 +198,9 @@ export class RecommendationEngine {
                     this.isWidelySupported(f);
             });
 
-            console.log('   Found', categoryFeatures.length, 'features in overlapping categories');
 
             const algorithmicComp = this.similarityEngine.findComplementary(feature, categoryFeatures, 5);
 
-            console.log('   Similarity engine returned', algorithmicComp.length, 'complementary features');
 
             algorithmicComp.forEach(comp => {
                 const compFeature = this.index.getFeature(comp.featureId)!;
@@ -240,8 +215,6 @@ export class RecommendationEngine {
                     });
                 }
             });
-        } else {
-            console.log('   No category found for this feature');
         }
 
         return recommendations;
@@ -271,8 +244,6 @@ export class RecommendationEngine {
             feature.id.includes('promise') ||
             feature.id.includes('async');
 
-        console.log('   Feature categories:', categoryArray);
-        console.log('   Is JS feature:', isJSFeature);
 
         // Language-specific recommendations
         if (!isJSFeature && (context.documentLanguage === 'css' || context.documentLanguage === 'scss')) {

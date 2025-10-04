@@ -47,7 +47,6 @@ export class ProjectAnalyzer {
         
         const cachedAnalysis = this.analysisCache.get(cacheKey);
         if (cachedAnalysis && this.isCacheValid(cachedAnalysis)) {
-            console.log('Returning cached analysis');
             return cachedAnalysis;
         }
         
@@ -87,20 +86,12 @@ export class ProjectAnalyzer {
                     await this.analyzeDocument(document, analysis);
                     analysis.analyzedFiles++;
                 } catch (error) {
-                    console.error(`Error analyzing ${file.fsPath}:`, error);
                 }
             }
         });
         
         await this.calculateCompatibility(analysis);
         this.generateSuggestions(analysis);
-        
-        console.log('Analysis complete:', {
-            featuresFound: analysis.features.size,
-            safeFeatures: analysis.safeFeatures.length,
-            riskFeatures: analysis.riskFeatures.length,
-            score: analysis.compatibilityScore
-        });
         
         this.analysisCache.set(cacheKey, analysis);
         this.scheduleCacheCleanup(cacheKey);
@@ -183,8 +174,6 @@ export class ProjectAnalyzer {
                     });
                 });
             }
-            
-            console.log(`Found feature: ${actualFeatureId} (${matchCount} matches in ${fileName})`);
         }
     }
     

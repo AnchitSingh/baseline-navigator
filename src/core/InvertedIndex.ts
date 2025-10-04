@@ -19,7 +19,6 @@ export class InvertedIndex {
             this.buildIndices(webFeatures.features);
             this.isReady = true;
         } catch (error) {
-            console.error('Failed to initialize InvertedIndex. The web-features package may not be installed or accessible:', error);
             // Provide a fallback empty index to avoid complete failure
             this.isReady = true; // Consider as ready but with no features
         }

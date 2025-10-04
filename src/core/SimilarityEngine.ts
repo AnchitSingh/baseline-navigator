@@ -332,8 +332,6 @@ export class SimilarityEngine {
         const targetCategory = targetFeature.spec?.category || targetFeature.group;
         const targetCategoryArray = Array.isArray(targetCategory) ? targetCategory : (targetCategory ? [targetCategory] : []);
 
-        console.log('   findBetterAlternatives: target categories =', targetCategoryArray);
-
         // Find features with better support but similar functionality
         const alternatives = candidates
             .filter(f => {
@@ -359,8 +357,6 @@ export class SimilarityEngine {
             .filter(s => s.score >= 0.3) // Lower threshold
             .sort((a, b) => b.score - a.score)
             .slice(0, maxResults);
-
-        console.log('   Found', alternatives.length, 'better alternatives');
 
         return alternatives;
     }
@@ -415,11 +411,7 @@ export class SimilarityEngine {
         const targetCategory = targetFeature.spec?.category || targetFeature.group;
         const targetCategoryArray = Array.isArray(targetCategory) ? targetCategory : (targetCategory ? [targetCategory] : []);
 
-        console.log('   findComplementary: targetCategories =', targetCategoryArray);
-        console.log('   findComplementary: candidates =', candidates.length);
-
         if (targetCategoryArray.length === 0) {
-            console.log('   Target feature has no category, returning empty');
             return [];
         }
 
@@ -436,11 +428,6 @@ export class SimilarityEngine {
             .filter(s => s.score >= 0.3) // Lower threshold to get some results
             .sort((a, b) => b.score - a.score)
             .slice(0, maxResults);
-
-        console.log('   Returning', complementary.length, 'complementary features');
-        if (complementary.length > 0) {
-            console.log('   Top match:', complementary[0]);
-        }
 
         return complementary;
     }

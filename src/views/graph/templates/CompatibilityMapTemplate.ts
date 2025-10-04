@@ -1001,50 +1001,45 @@ export class CompatibilityMapTemplate {
             });
             
             // Node selection - SHOW DETAILS AND REQUEST RECOMMENDATIONS
-function selectNode(node) {
-    console.log('🎯 Node selected:', node.id, node.label);
-    selectedNode = node;
-    
-    const featureEl = document.getElementById('selected-feature');
-    featureEl.classList.add('visible');
-    
-    featureEl.querySelector('.feature-name').textContent = node.label;
-    
-    const statusEl = featureEl.querySelector('.feature-status');
-    statusEl.textContent = node.status.charAt(0).toUpperCase() + node.status.slice(1);
-    statusEl.className = \`feature-status status-\${node.status}\`;
-    
-    // Show browser support
-    const browserGrid = featureEl.querySelector('.browser-grid');
-    browserGrid.innerHTML = '';
-    if (node.browsers) {
-        Object.entries(node.browsers).forEach(([browser, version]) => {
-            const chip = document.createElement('div');
-            chip.className = 'browser-chip';
-            chip.textContent = \`\${browser}: \${version}+\`;
-            browserGrid.appendChild(chip);
-        });
-    } else {
-        browserGrid.innerHTML = '<div class="browser-chip" style="grid-column: 1/-1;">Browser data not available</div>';
-    }
-    
-    // Show loading state for recommendations
-    const recsContainer = document.getElementById('recommendations');
-    const recsContent = document.getElementById('recommendations-content');
-    recsContainer.classList.add('visible');
-    recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading smart recommendations...</div>';
-    
-    console.log('📤 Sending getRecommendations message for:', node.id);
-    
-    // Request recommendations from extension
-    vscode.postMessage({
-        command: 'getRecommendations',
-        featureId: node.id,
-        languageId: node.languageType || 'css'
-    });
-    
-    console.log('✅ Message sent');
-}
+            function selectNode(node) {
+                selectedNode = node;
+                
+                const featureEl = document.getElementById('selected-feature');
+                featureEl.classList.add('visible');
+                
+                featureEl.querySelector('.feature-name').textContent = node.label;
+                
+                const statusEl = featureEl.querySelector('.feature-status');
+                statusEl.textContent = node.status.charAt(0).toUpperCase() + node.status.slice(1);
+                statusEl.className = \`feature-status status-\${node.status}\`;
+                
+                // Show browser support
+                const browserGrid = featureEl.querySelector('.browser-grid');
+                browserGrid.innerHTML = '';
+                if (node.browsers) {
+                    Object.entries(node.browsers).forEach(([browser, version]) => {
+                        const chip = document.createElement('div');
+                        chip.className = 'browser-chip';
+                        chip.textContent = \`\${browser}: \${version}+\`;
+                        browserGrid.appendChild(chip);
+                    });
+                } else {
+                    browserGrid.innerHTML = '<div class="browser-chip" style="grid-column: 1/-1;">Browser data not available</div>';
+                }
+                
+                // Show loading state for recommendations
+                const recsContainer = document.getElementById('recommendations');
+                const recsContent = document.getElementById('recommendations-content');
+                recsContainer.classList.add('visible');
+                recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading smart recommendations...</div>';
+                
+                // Request recommendations from extension
+                vscode.postMessage({
+                    command: 'getRecommendations',
+                    featureId: node.id,
+                    languageId: node.languageType || 'css'
+                });
+            }
             
             // Search functionality - HIGHLIGHT matches
             document.getElementById('search').addEventListener('input', (e) => {
@@ -1141,89 +1136,76 @@ function selectNode(node) {
             }
             
             // Handle messages from extension - RECEIVE RECOMMENDATIONS
-            // Handle messages from extension - RECEIVE RECOMMENDATIONS
-window.addEventListener('message', event => {
-    console.log('📨 Message received from extension:', event.data);
-    
-    const message = event.data;
-    switch (message.command) {
-        case 'showRecommendations':
-            console.log('💡 Showing recommendations:', message.recommendations);
-            displayRecommendations(message.recommendations);
-            break;
-        default:
-            console.log('❓ Unknown message command:', message.command);
-    }
-});
-            
-            function displayRecommendations(recommendations) {
-    console.log('🎨 displayRecommendations called with:', recommendations);
-    
-    const container = document.getElementById('recommendations-content');
-    
-    if (!recommendations || recommendations.length === 0) {
-        console.warn('⚠️ No recommendations to display');
-        container.innerHTML = '<div style="opacity: 0.7; font-size: 13px; padding: 12px;">No recommendations available for this feature</div>';
-        return;
-    }
-    
-    console.log('✅ Displaying', recommendations.length, 'recommendations');
-    
-    // Group by type
-    const grouped = {
-        alternative: [],
-        upgrade: [],
-        complementary: [],
-        contextual: []
-    };
-    
-    recommendations.forEach(rec => {
-        const type = rec.type || 'contextual';
-        if (grouped[type]) {
-            grouped[type].push(rec);
-        }
-    });
-    
-    console.log('📊 Grouped recommendations:', {
-        alternative: grouped.alternative.length,
-        upgrade: grouped.upgrade.length,
-        complementary: grouped.complementary.length,
-        contextual: grouped.contextual.length
-    });
-    
-    container.innerHTML = '';
-    
-    // Render each group
-    const sections = [
-        { key: 'alternative', icon: '🔄', label: 'Better Alternatives' },
-        { key: 'upgrade', icon: '🚀', label: 'Upgrades' },
-        { key: 'complementary', icon: '🤝', label: 'Works Well With' },
-        { key: 'contextual', icon: '🔗', label: 'Related' }
-    ];
-    
-    sections.forEach(section => {
-        const recs = grouped[section.key];
-        if (recs && recs.length > 0) {
-            console.log(\`  Creating section: \${section.label} (\${recs.length} items)\`);
-            const sectionDiv = document.createElement('div');
-            sectionDiv.className = 'recommendation-section';
-            
-            const label = document.createElement('div');
-            label.className = 'section-label';
-            label.innerHTML = \`<span>\${section.icon}</span> \${section.label}\`;
-            sectionDiv.appendChild(label);
-            
-            recs.forEach(rec => {
-                const card = createRecommendationCard(rec, section.key);
-                sectionDiv.appendChild(card);
+            window.addEventListener('message', event => {
+                
+                const message = event.data;
+                switch (message.command) {
+                    case 'showRecommendations':
+                        displayRecommendations(message.recommendations);
+                        break;
+                    default:
+                        console.log('Unknown message command:', message.command);
+                }
             });
             
-            container.appendChild(sectionDiv);
-        }
-    });
+            function displayRecommendations(recommendations) {
     
-    console.log('✅ Recommendations rendered');
-}
+                const container = document.getElementById('recommendations-content');
+                
+                if (!recommendations || recommendations.length === 0) {
+                    container.innerHTML = '<div style="opacity: 0.7; font-size: 13px; padding: 12px;">No recommendations available for this feature</div>';
+                    return;
+                }
+                
+                
+                // Group by type
+                const grouped = {
+                    alternative: [],
+                    upgrade: [],
+                    complementary: [],
+                    contextual: []
+                };
+                
+                recommendations.forEach(rec => {
+                    const type = rec.type || 'contextual';
+                    if (grouped[type]) {
+                        grouped[type].push(rec);
+                    }
+                });
+                
+                
+                
+                container.innerHTML = '';
+                
+                // Render each group
+                const sections = [
+                    { key: 'alternative', icon: '🔄', label: 'Better Alternatives' },
+                    { key: 'upgrade', icon: '🚀', label: 'Upgrades' },
+                    { key: 'complementary', icon: '🤝', label: 'Works Well With' },
+                    { key: 'contextual', icon: '🔗', label: 'Related' }
+                ];
+                
+                sections.forEach(section => {
+                    const recs = grouped[section.key];
+                    if (recs && recs.length > 0) {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'recommendation-section';
+                        
+                        const label = document.createElement('div');
+                        label.className = 'section-label';
+                        label.innerHTML = \`<span>\${section.icon}</span> \${section.label}\`;
+                        sectionDiv.appendChild(label);
+                        
+                        recs.forEach(rec => {
+                            const card = createRecommendationCard(rec, section.key);
+                            sectionDiv.appendChild(card);
+                        });
+                        
+                        container.appendChild(sectionDiv);
+                    }
+                });
+                
+            }
             
             function createRecommendationCard(rec, type) {
                 const card = document.createElement('div');

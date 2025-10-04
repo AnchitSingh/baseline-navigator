@@ -15,19 +15,19 @@ let configManager: ConfigurationManager;
 function generateDetailedReport(analysis: ProjectAnalysis): string {
     let report = `# Baseline Compatibility Report\n\n`;
     report += `Generated: ${analysis.timestamp.toISOString()}\n\n`;
-    
+
     const config = configManager.getConfiguration();
     report += `## Configuration\n`;
     report += `- **Target Browsers**: ${config.targetBrowsers.join(', ')}\n`;
     report += `- **Risk Tolerance**: ${config.riskTolerance}\n\n`;
-    
+
     report += `## Summary\n`;
     report += `- **Compatibility Score**: ${analysis.compatibilityScore}/100\n`;
     report += `- **Files Analyzed**: ${analysis.analyzedFiles}/${analysis.totalFiles}\n`;
     report += `- **Features Found**: ${analysis.features.size}\n`;
     report += `- **Risk Features**: ${analysis.riskFeatures.length}\n`;
     report += `- **Safe Features**: ${analysis.safeFeatures.length}\n\n`;
-    
+
     report += `## Risk Features (Need Attention)\n`;
     if (analysis.riskFeatures.length > 0) {
         analysis.riskFeatures.forEach(rf => {
@@ -45,57 +45,53 @@ function generateDetailedReport(analysis: ProjectAnalysis): string {
     } else {
         report += `No risk features found.\n`;
     }
-    
+
     report += `\n## Safe Features\n`;
     if (analysis.safeFeatures.length > 0) {
         analysis.safeFeatures.slice(0, 10).forEach(sf => {
             report += `- **${sf.feature.name || sf.feature.id}**: ${sf.usageCount} uses in ${sf.files.length} files\n`;
         });
     }
-    
+
     report += `\n## Recommendations\n`;
     analysis.suggestions.forEach(suggestion => {
         report += `- ${suggestion}\n`;
     });
-    
+
     return report;
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('🚀 Baseline Navigator is activating...');
-    
+
     try {
         // Initialize configuration manager
         configManager = ConfigurationManager.getInstance();
         const config = configManager.getConfiguration();
-        
+
         if (!config.enabled) {
-            console.log('Baseline Navigator is disabled in settings');
             return;
         }
-        
+
         // Initialize core services
         const index = new InvertedIndex();
         const recommendationEngine = new RecommendationEngine(index);
-        
+
         // Wait for index to be ready
         try {
             await index.waitForReady();
-            console.log('✅ Index ready with features loaded');
         } catch (error) {
-            console.error('Failed to initialize index:', error);
             vscode.window.showErrorMessage(`Baseline Navigator failed to initialize: ${error}`);
             return;
         }
-        
+
         // Initialize providers (conditionally based on config)
         const hoverProvider = new BaselineHoverProvider(index, configManager);
         const codeActionProvider = new BaselineCodeActionProvider(index, configManager);
         diagnosticProvider = new BaselineDiagnosticProvider(index, configManager);
-        
+
         // Initialize views
         const graphView = new GraphView(context.extensionUri, index);
-        
+
         // Register providers
         if (config.enableHoverInfo) {
             context.subscriptions.push(
@@ -105,7 +101,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 )
             );
         }
-        
+
         if (config.enableCodeActions) {
             context.subscriptions.push(
                 vscode.languages.registerCodeActionsProvider(
@@ -114,37 +110,37 @@ export async function activate(context: vscode.ExtensionContext) {
                 )
             );
         }
-        
+
         // Register commands
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.showGraph', () => {
                 graphView.show();
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.analyzeProject', async () => {
                 await graphView.showProjectGraph();
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.configure', async () => {
                 await configManager.configure();
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.quickProjectCheck', async () => {
                 try {
                     const analyzer = new ProjectAnalyzer(index);
                     const analysis = await analyzer.analyzeProject();
-                    
+
                     let message = `Compatibility Score: ${analysis.compatibilityScore}/100\n`;
                     message += `${analysis.riskFeatures.length} risky features found\n`;
                     message += `${analysis.safeFeatures.length} safe features used\n`;
                     message += `${analysis.analyzedFiles}/${analysis.totalFiles} files analyzed`;
-                    
+
                     if (analysis.compatibilityScore >= 90) {
                         message = `✅ Excellent! ${message}`;
                     } else if (analysis.compatibilityScore >= 70) {
@@ -152,14 +148,14 @@ export async function activate(context: vscode.ExtensionContext) {
                     } else {
                         message = `⚠️ Attention needed! ${message}`;
                     }
-                    
+
                     const action = await vscode.window.showInformationMessage(
                         message,
                         'View Details',
                         'Export Report',
                         'Configure'
                     );
-                    
+
                     if (action === 'View Details') {
                         vscode.commands.executeCommand('baseline-navigator.analyzeProject');
                     } else if (action === 'Export Report') {
@@ -175,11 +171,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
                     vscode.window.showErrorMessage(`Project analysis failed: ${errorMessage}`);
-                    console.error('Project analysis error:', error);
                 }
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.checkCompatibility', async () => {
                 const editor = vscode.window.activeTextEditor;
@@ -190,12 +185,11 @@ export async function activate(context: vscode.ExtensionContext) {
                     } catch (error) {
                         const errorMessage = error instanceof Error ? error.message : String(error);
                         vscode.window.showErrorMessage(`Compatibility check failed: ${errorMessage}`);
-                        console.error('Diagnostic update error:', error);
                     }
                 }
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.showFeatureDetails', (feature) => {
                 const panel = vscode.window.createWebviewPanel(
@@ -204,11 +198,11 @@ export async function activate(context: vscode.ExtensionContext) {
                     vscode.ViewColumn.Two,
                     { enableScripts: true }
                 );
-                
+
                 panel.webview.html = getFeatureDetailsHtml(feature);
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.findSimilar', async (featureId: string) => {
                 const similar = await index.getSimilarFeatures(featureId);
@@ -220,7 +214,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 }));
                 quickPick.onDidChangeSelection(selection => {
                     if (selection[0]) {
-                        vscode.commands.executeCommand('baseline-navigator.showFeatureDetails', 
+                        vscode.commands.executeCommand('baseline-navigator.showFeatureDetails',
                             similar.find(f => f.name === selection[0].label || f.id === selection[0].label)
                         );
                     }
@@ -228,7 +222,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 quickPick.show();
             })
         );
-        
+
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.openDocumentation', (feature) => {
                 if (feature.mdn_url) {
@@ -240,7 +234,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             })
         );
-        
+
         // Auto-check on save (if enabled)
         if (config.checkOnSave) {
             context.subscriptions.push(
@@ -249,22 +243,21 @@ export async function activate(context: vscode.ExtensionContext) {
                 })
             );
         }
-        
+
         // Listen for configuration changes
         configManager.onDidChange((newConfig) => {
-            console.log('Configuration changed:', newConfig);
-            
+
             // Refresh diagnostics if active editor
             if (vscode.window.activeTextEditor) {
                 diagnosticProvider.updateDiagnostics(vscode.window.activeTextEditor.document);
             }
         });
-        
+
         // Check active editor on activation
         if (vscode.window.activeTextEditor) {
             diagnosticProvider.updateDiagnostics(vscode.window.activeTextEditor.document);
         }
-        
+
         // Status bar item with configuration indicator
         const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
         statusBarItem.text = `$(telescope) Baseline [${config.riskTolerance}]`;
@@ -272,14 +265,13 @@ export async function activate(context: vscode.ExtensionContext) {
         statusBarItem.command = 'baseline-navigator.showGraph';
         statusBarItem.show();
         context.subscriptions.push(statusBarItem);
-        
+
         // Update status bar on config change
         configManager.onDidChange((newConfig) => {
             statusBarItem.text = `$(telescope) Baseline [${newConfig.riskTolerance}]`;
         });
-        
-        console.log('✨ Baseline Navigator is ready!');
-        
+
+
         // Show welcome message with configuration option
         const showWelcome = context.globalState.get('baseline.welcomeShown', false);
         if (!showWelcome) {
@@ -288,16 +280,15 @@ export async function activate(context: vscode.ExtensionContext) {
                 'Configure Now',
                 'Later'
             );
-            
+
             if (action === 'Configure Now') {
                 await configManager.configure();
             }
-            
+
             context.globalState.update('baseline.welcomeShown', true);
         }
-        
+
     } catch (error) {
-        console.error('Failed to activate Baseline Navigator:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`Failed to activate Baseline Navigator: ${errorMessage}`);
     }
@@ -307,13 +298,12 @@ export function deactivate() {
     if (diagnosticProvider) {
         diagnosticProvider.dispose();
     }
-    console.log('Baseline Navigator deactivated');
 }
 
 function getFeatureDetailsHtml(feature: any): string {
     const config = configManager.getConfiguration();
     const targetBrowsers = config.targetBrowsers;
-    
+
     return `<!DOCTYPE html>
     <html>
     <head>

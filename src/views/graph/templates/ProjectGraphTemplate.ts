@@ -671,8 +671,6 @@ export class ProjectGraphTemplate {
 
     private getScript(graphData: GraphData, analysis: ProjectAnalysis): string {
         return `
-            console.log('🎯 Project graph script starting...');
-            
             const vscode = acquireVsCodeApi();
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
@@ -708,8 +706,6 @@ export class ProjectGraphTemplate {
                 node.vx = 0;
                 node.vy = 0;
             });
-            
-            console.log('✅ Initialized', simulation.nodes.length, 'nodes');
             
             // Canvas setup
             function resizeCanvas() {
@@ -881,7 +877,6 @@ export class ProjectGraphTemplate {
             
             // Node selection - SHOW DETAILS AND REQUEST RECOMMENDATIONS
             function selectNode(node) {
-                console.log('🎯 Node selected:', node.id, node.label);
                 selectedNode = node;
                 
                 // Zoom to node in graph
@@ -907,8 +902,6 @@ export class ProjectGraphTemplate {
                 recsPanel.classList.add('visible');
                 recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading recommendations...</div>';
                 
-                console.log('📤 Requesting recommendations for:', node.id);
-                
                 // Request recommendations
                 vscode.postMessage({
                     command: 'getRecommendations',
@@ -928,18 +921,15 @@ export class ProjectGraphTemplate {
             // Handle messages from extension
             window.addEventListener('message', event => {
                 const message = event.data;
-                console.log('📨 Project graph received message:', message.command);
                 
                 switch (message.command) {
                     case 'showRecommendations':
-                        console.log('💡 Showing recommendations:', message.recommendations);
                         displayRecommendations(message.recommendations);
                         break;
                 }
             });
             
             function displayRecommendations(recommendations) {
-                console.log('🎨 Displaying recommendations:', recommendations);
                 
                 const recsContent = document.getElementById('recommendations-content');
     
@@ -1035,7 +1025,6 @@ export class ProjectGraphTemplate {
             document.querySelectorAll('.feature-item').forEach(item => {
                 item.addEventListener('click', () => {
                     const featureId = item.dataset.id;
-                    console.log('📋 Feature item clicked:', featureId);
                     
                     // Try to find and select the node in graph
                     const node = simulation.nodes.find(n => n.id === featureId);
@@ -1045,7 +1034,6 @@ export class ProjectGraphTemplate {
                         selectNode(node);
                     } else {
                         // If not in graph, still request recommendations directly
-                        console.log('⚠️ Node not in graph, requesting recommendations anyway');
                         
                         // Highlight in the feature list
                         document.querySelectorAll('.feature-item').forEach(i => {
@@ -1061,7 +1049,6 @@ export class ProjectGraphTemplate {
                         recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading recommendations...</div>';
                         
                         // Request recommendations directly
-                        console.log('📤 Requesting recommendations for:', featureId);
                         vscode.postMessage({
                             command: 'getRecommendations',
                             featureId: featureId,
@@ -1173,13 +1160,11 @@ export class ProjectGraphTemplate {
             }
             
             // Start render loop
-            console.log('🎨 Starting render loop...');
             render();
             
             // Stop physics after initial layout
             setTimeout(() => {
                 simulation.running = false;
-                console.log('⏸️ Physics simulation stopped');
             }, 5000);
         `;
     }
