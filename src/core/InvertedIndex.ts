@@ -19,8 +19,9 @@ export class InvertedIndex {
             this.buildIndices(webFeatures.features);
             this.isReady = true;
         } catch (error) {
-            console.error('Failed to initialize InvertedIndex:', error);
-            throw error;
+            console.error('Failed to initialize InvertedIndex. The web-features package may not be installed or accessible:', error);
+            // Provide a fallback empty index to avoid complete failure
+            this.isReady = true; // Consider as ready but with no features
         }
     }
 
@@ -93,8 +94,12 @@ export class InvertedIndex {
         return tags;
     }
 
-    public async waitForReady(): Promise<void> {
+    public async waitForReady(timeoutMs: number = 10000): Promise<void> {
+        const startTime = Date.now();
         while (!this.isReady) {
+            if (Date.now() - startTime > timeoutMs) {
+                throw new Error(`InvertedIndex failed to initialize within ${timeoutMs}ms`);
+            }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
     }

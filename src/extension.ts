@@ -63,8 +63,14 @@ export async function activate(context: vscode.ExtensionContext) {
         const recommendationEngine = new RecommendationEngine(index);
         
         // Wait for index to be ready
-        await index.waitForReady();
-        console.log('✅ Index ready with features loaded');
+        try {
+            await index.waitForReady();
+            console.log('✅ Index ready with features loaded');
+        } catch (error) {
+            console.error('Failed to initialize index:', error);
+            vscode.window.showErrorMessage(`Baseline Navigator failed to initialize: ${error}`);
+            return; // Exit activation if index doesn't load
+        }
         
         // Initialize providers
         const hoverProvider = new BaselineHoverProvider(index);
@@ -104,27 +110,45 @@ export async function activate(context: vscode.ExtensionContext) {
         
         context.subscriptions.push(
             vscode.commands.registerCommand('baseline-navigator.quickProjectCheck', async () => {
-                const analyzer = new ProjectAnalyzer(index);
-                const analysis = await analyzer.analyzeProject();
-                
-                const message = `Compatibility Score: ${analysis.compatibilityScore}/100\n${analysis.riskFeatures.length} risky features found\n${analysis.safeFeatures.length} safe features used`;
-                
-                const action = await vscode.window.showInformationMessage(
-                    message,
-                    'View Details',
-                    'Export Report'
-                );
-                
-                if (action === 'View Details') {
-                    vscode.commands.executeCommand('baseline-navigator.analyzeProject');
-                } else if (action === 'Export Report') {
-                    // Generate and show report
-                    const report = generateDetailedReport(analysis);
-                    const doc = await vscode.workspace.openTextDocument({
-                        content: report,
-                        language: 'markdown'
-                    });
-                    await vscode.window.showTextDocument(doc);
+                try {
+                    const analyzer = new ProjectAnalyzer(index);
+                    const analysis = await analyzer.analyzeProject();
+                    
+                    let message = `Compatibility Score: ${analysis.compatibilityScore}/100\n`;
+                    message += `${analysis.riskFeatures.length} risky features found\n`;
+                    message += `${analysis.safeFeatures.length} safe features used\n`;
+                    message += `${analysis.analyzedFiles}/${analysis.totalFiles} files analyzed`;
+                    
+                    // Change message based on score
+                    if (analysis.compatibilityScore >= 90) {
+                        message = `✅ Excellent! ${message}`;
+                    } else if (analysis.compatibilityScore >= 70) {
+                        message = `⚠️ Good! ${message}`;
+                    } else {
+                        message = `⚠️ Attention needed! ${message}`;
+                    }
+                    
+                    const action = await vscode.window.showInformationMessage(
+                        message,
+                        'View Details',
+                        'Export Report'
+                    );
+                    
+                    if (action === 'View Details') {
+                        vscode.commands.executeCommand('baseline-navigator.analyzeProject');
+                    } else if (action === 'Export Report') {
+                        // Generate and show report
+                        const report = generateDetailedReport(analysis);
+                        const doc = await vscode.workspace.openTextDocument({
+                            content: report,
+                            language: 'markdown'
+                        });
+                        await vscode.window.showTextDocument(doc);
+                    }
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    vscode.window.showErrorMessage(`Project analysis failed: ${errorMessage}`);
+                    console.error('Project analysis error:', error);
                 }
             })
         );
@@ -133,8 +157,14 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('baseline-navigator.checkCompatibility', async () => {
                 const editor = vscode.window.activeTextEditor;
                 if (editor) {
-                    await diagnosticProvider.updateDiagnostics(editor.document);
-                    vscode.window.showInformationMessage('✅ Compatibility check complete');
+                    try {
+                        await diagnosticProvider.updateDiagnostics(editor.document);
+                        vscode.window.showInformationMessage('✅ Compatibility check complete');
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        vscode.window.showErrorMessage(`Compatibility check failed: ${errorMessage}`);
+                        console.error('Diagnostic update error:', error);
+                    }
                 }
             })
         );
@@ -212,7 +242,8 @@ export async function activate(context: vscode.ExtensionContext) {
         
     } catch (error) {
         console.error('Failed to activate Baseline Navigator:', error);
-        vscode.window.showErrorMessage(`Failed to activate Baseline Navigator: ${error}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to activate Baseline Navigator: ${errorMessage}. Please check the console for details.`);
     }
 }
 

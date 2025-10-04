@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { InvertedIndex } from './InvertedIndex';
 import { Feature } from '../types';
+import { ALTERNATIVES_MAPPING, UPGRADES_MAPPING, FEATURE_ID_MAPPING } from './FeatureMappings';
 
 export interface ProjectFeature {
     feature: Feature;
@@ -29,63 +30,8 @@ export interface ProjectAnalysis {
 export class ProjectAnalyzer {
     private featurePatterns: Map<string, RegExp[]> = new Map();
     private jsApiPatterns: Map<string, RegExp[]> = new Map();
-    
-    // Create alternative mappings (same as in GraphView for consistency)
-    private alternatives: Record<string, string[]> = {
-        'subgrid': ['grid', 'flexbox'],
-        'container-queries': ['media-queries', 'clamp', 'viewport-units'],
-        'css-has': ['css-not', 'css-is', 'css-where'],
-        'backdrop-filter': ['filter', 'background-blur'],
-        'gap': ['margin', 'padding', 'spacer-elements'],
-        'aspect-ratio': ['padding-hack', 'viewport-units'],
-        'scroll-snap': ['scroll-behavior', 'intersection-observer'],
-        'css-nesting': ['sass-nesting', 'postcss'],
-        'cascade-layers': ['css-specificity', 'important'],
-        'color-mix': ['css-variables', 'preprocessor-functions']
-    };
-    
-    private upgrades: Record<string, string> = {
-        'flexbox': 'grid',
-        'float': 'flexbox',
-        'table-layout': 'grid',
-        'css-variables': 'css-custom-properties',
-        'webkit-transform': 'transform',
-        'moz-border-radius': 'border-radius'
-    };
-    
-
-    
-    // CRITICAL FIX: Map our pattern keys to actual web-features IDs
-    private featureIdMapping: Map<string, string> = new Map([
-        // CSS mappings - these must match actual web-features IDs
-        ['grid', 'grid'],  // CSS Grid
-        ['flexbox', 'flexbox'],  // Flexbox
-        ['container-queries', 'container-queries'],  // Container Queries
-        ['subgrid', 'subgrid'],  // Subgrid
-        ['css-has', 'has'],  // :has() selector
-        ['css-nesting', 'css-nesting'],  // CSS Nesting
-        ['cascade-layers', 'cascade-layers'],  // @layer
-        ['aspect-ratio', 'aspect-ratio'],  // aspect-ratio property
-        ['gap', 'gap'],  // gap property
-        ['custom-properties', 'custom-properties'],  // CSS Variables
-        ['clamp', 'clamp'],  // clamp() function
-        ['backdrop-filter', 'backdrop-filter'],  // backdrop-filter
-        ['scroll-snap', 'scroll-snap'],  // scroll-snap
-        ['sticky', 'position-sticky'],  // position: sticky
-        ['transforms', 'transforms-2d'],  // CSS Transforms
-        ['animations', 'css-animations'],  // CSS Animations
-        ['transitions', 'css-transitions'],  // CSS Transitions
-        
-        // JS API mappings
-        ['intersection-observer', 'intersectionobserver'],
-        ['fetch-api', 'fetch'],
-        ['web-components', 'custom-elements'],
-        ['promises', 'promises'],
-        ['es-modules', 'es6-module'],
-        ['array-methods', 'array-find'],
-        ['optional-chaining', 'optional-chaining'],
-        ['destructuring', 'destructuring']
-    ]);
+    private analysisCache: Map<string, ProjectAnalysis> = new Map(); // Cache for project analysis
+    private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
     
     constructor(private index: InvertedIndex) {
         this.initializePatterns();
@@ -240,6 +186,17 @@ export class ProjectAnalyzer {
             throw new Error('No workspace folder open');
         }
         
+        // Create a cache key based on workspace folders and their modification times
+        const workspacePaths = workspaceFolders.map(folder => folder.uri.fsPath).sort();
+        const cacheKey = `analysis_${workspacePaths.join('_')}`;
+        
+        // Check if we have a valid cached result
+        const cachedAnalysis = this.analysisCache.get(cacheKey);
+        if (cachedAnalysis && this.isCacheValid(cachedAnalysis)) {
+            console.log('Returning cached analysis');
+            return cachedAnalysis;
+        }
+        
         const analysis: ProjectAnalysis = {
             features: new Map(),
             totalFiles: 0,
@@ -279,6 +236,7 @@ export class ProjectAnalyzer {
                     analysis.analyzedFiles++;
                 } catch (error) {
                     console.error(`Error analyzing ${file.fsPath}:`, error);
+                    // Don't fail the entire analysis due to one file error
                 }
             }
         });
@@ -296,6 +254,10 @@ export class ProjectAnalyzer {
             riskFeatures: analysis.riskFeatures.length,
             score: analysis.compatibilityScore
         });
+        
+        // Cache the result
+        this.analysisCache.set(cacheKey, analysis);
+        this.scheduleCacheCleanup(cacheKey);
         
         return analysis;
     }
@@ -328,7 +290,7 @@ export class ProjectAnalyzer {
                     let actualFeatureId: string = patternKey;
                     
                     // Try mapped ID first
-                    const mappedId = this.featureIdMapping.get(patternKey);
+                    const mappedId = FEATURE_ID_MAPPING.get(patternKey);
                     if (mappedId) {
                         feature = this.index.getFeature(mappedId);
                         if (feature) {
@@ -477,7 +439,7 @@ export class ProjectAnalyzer {
                 suggestions.push(`  • ${featureName}: Used ${rf.usageCount} times in ${rf.files.length} file(s)`);
                 
                 // Check for alternatives in our mapping
-                const alternatives = this.alternatives[rf.feature.id] || [];
+                const alternatives = ALTERNATIVES_MAPPING[rf.feature.id] || [];
                 if (alternatives.length > 0) {
                     suggestions.push(`    → Alternatives: ${alternatives.join(', ')}`);
                 } else {
@@ -497,7 +459,7 @@ export class ProjectAnalyzer {
 
             // Suggest upgrades for existing features
             analysis.features.forEach((projectFeature, featureId) => {
-                const upgradeTargetId = this.upgrades[featureId];
+                const upgradeTargetId = UPGRADES_MAPPING[featureId];
                 if (upgradeTargetId && !analysis.features.has(upgradeTargetId) && !recommendedUpgrades.has(upgradeTargetId)) {
                     const upgradeTargetFeature = this.index.getFeature(upgradeTargetId);
                     const sourceFeatureName = projectFeature.feature.name || featureId;
@@ -545,5 +507,17 @@ export class ProjectAnalyzer {
         } else {
             return [];
         }
+    }
+    
+    private isCacheValid(analysis: ProjectAnalysis): boolean {
+        const age = Date.now() - analysis.timestamp.getTime();
+        return age < this.cacheTimeout;
+    }
+    
+    private scheduleCacheCleanup(cacheKey: string): void {
+        // Clean up the cache after the timeout period
+        setTimeout(() => {
+            this.analysisCache.delete(cacheKey);
+        }, this.cacheTimeout);
     }
 }

@@ -1,11 +1,17 @@
 import { Feature, Recommendation, RecommendationContext } from '../types';
 import { InvertedIndex } from './InvertedIndex';
+import { ALTERNATIVES_MAPPING } from './FeatureMappings';
 
 export class RecommendationEngine {
     constructor(private index: InvertedIndex) {}
 
     public async getRecommendations(context: RecommendationContext): Promise<Recommendation[]> {
-        await this.index.waitForReady();
+        try {
+            await this.index.waitForReady();
+        } catch (error) {
+            console.error('Failed to get recommendations: Index not ready', error);
+            return [];
+        }
         const recommendations: Recommendation[] = [];
         
         const currentFeature = this.index.getFeature(context.currentFeature);
@@ -60,15 +66,7 @@ export class RecommendationEngine {
         const alternatives: Feature[] = [];
         
         // Predefined alternatives mapping
-        const alternativeMap: Record<string, string[]> = {
-            'subgrid': ['grid', 'flexbox'],
-            'container-queries': ['media-queries', 'clamp'],
-            'css-has': ['css-not', 'css-is'],
-            'backdrop-filter': ['filter', 'opacity'],
-            'gap': ['margin', 'padding'],
-            'aspect-ratio': ['padding-hack', 'viewport-units'],
-            'scroll-snap': ['scroll-behavior', 'smooth-scroll'],
-        };
+        const alternativeMap = ALTERNATIVES_MAPPING;
 
         const altIds = alternativeMap[feature.id] || [];
         for (const altId of altIds) {
