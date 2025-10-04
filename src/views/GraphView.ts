@@ -88,18 +88,7 @@ export class GraphView {
         return template.generate(graphData);
     }
 
-    private setupMessageHandling(): void {
-        this.panel?.webview.onDidReceiveMessage(async message => {
-            switch (message.command) {
-                case 'getFeatureDetails':
-                    await this.handleFeatureDetailsRequest(message);
-                    break;
-                case 'getRecommendations':
-                    await this.handleRecommendationsRequest(message);
-                    break;
-            }
-        });
-    }
+   
 
     private async handleFeatureDetailsRequest(message: any): Promise<void> {
         const feature = this.index.getFeature(message.featureId);
@@ -123,48 +112,83 @@ export class GraphView {
         });
     }
 
-    private async handleRecommendationsRequest(message: any): Promise<void> {
-        const feature = this.index.getFeature(message.featureId);
+    
+    private setupMessageHandling(): void {
+    this.panel?.webview.onDidReceiveMessage(async message => {
+        console.log('📨 GraphView received message:', message.command, message);
         
-        if (!feature) {
-            console.error(`Feature not found: ${message.featureId}`);
-            return;
+        switch (message.command) {
+            case 'getFeatureDetails':
+                await this.handleFeatureDetailsRequest(message);
+                break;
+            case 'getRecommendations':
+                console.log('🎯 Handling getRecommendations for:', message.featureId);
+                await this.handleRecommendationsRequest(message);
+                break;
+            default:
+                console.log('❓ Unknown command:', message.command);
         }
+    });
+}
 
-        console.log(`Getting recommendations for: ${message.featureId}`);
-
-        // Use the enhanced recommendation engine
-        const recommendations = await this.recommendationEngine.getRecommendations({
-            currentFeature: message.featureId,
-            documentLanguage: message.languageId || 'css',
-            targetBrowsers: message.targetBrowsers || ['chrome', 'firefox', 'safari', 'edge']
-        });
-
-        console.log(`Found ${recommendations.length} recommendations`);
-
-        // Transform recommendations for the webview
-        const transformedRecs = recommendations.map(rec => ({
-            feature: {
-                id: rec.feature.id,
-                name: rec.feature.name || rec.feature.id,
-                description: rec.feature.description,
-                status: rec.feature.status
-            },
-            reason: rec.reason,
-            confidence: rec.confidence,
-            type: rec.type || 'related',
-            alternatives: rec.alternatives?.map(alt => ({
-                id: alt.id,
-                name: alt.name || alt.id
-            })) || []
-        }));
-
+private async handleRecommendationsRequest(message: any): Promise<void> {
+    console.log('🔍 Getting recommendations for feature:', message.featureId);
+    
+    const feature = this.index.getFeature(message.featureId);
+    
+    if (!feature) {
+        console.error('❌ Feature not found:', message.featureId);
         this.panel?.webview.postMessage({
             command: 'showRecommendations',
             featureId: message.featureId,
-            recommendations: transformedRecs
+            recommendations: []
         });
+        return;
     }
+
+    console.log('✅ Feature found:', feature.name || feature.id);
+    console.log('📊 Feature status:', feature.status?.baseline);
+
+    // Use the enhanced recommendation engine
+    const recommendations = await this.recommendationEngine.getRecommendations({
+        currentFeature: message.featureId,
+        documentLanguage: message.languageId || 'css',
+        targetBrowsers: message.targetBrowsers || ['chrome', 'firefox', 'safari', 'edge']
+    });
+
+    console.log('💡 Got', recommendations.length, 'recommendations');
+    
+    if (recommendations.length > 0) {
+        console.log('   Sample recommendation:', recommendations[0]);
+    }
+
+    // Transform recommendations for the webview
+    const transformedRecs = recommendations.map(rec => ({
+        feature: {
+            id: rec.feature.id,
+            name: rec.feature.name || rec.feature.id,
+            description: rec.feature.description,
+            status: rec.feature.status
+        },
+        reason: rec.reason,
+        confidence: rec.confidence,
+        type: rec.type || 'related',
+        alternatives: rec.alternatives?.map(alt => ({
+            id: alt.id,
+            name: alt.name || alt.id
+        })) || []
+    }));
+
+    console.log('📤 Sending', transformedRecs.length, 'recommendations to webview');
+
+    this.panel?.webview.postMessage({
+        command: 'showRecommendations',
+        featureId: message.featureId,
+        recommendations: transformedRecs
+    });
+    
+    console.log('✅ Message sent to webview');
+}
 
     private getErrorHtmlContent(): string {
         return `<!DOCTYPE html>

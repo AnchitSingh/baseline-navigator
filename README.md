@@ -3,128 +3,153 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Google Baseline](https://img.shields.io/badge/Google-Baseline-4285f4.svg)](https://web.dev/baseline)
 
-**Your intelligent co-pilot for modern web development.** Baseline Navigator brings real-time browser compatibility insights directly into VS Code, helping you build with confidence using the latest web features.
+A VS Code extension that brings Google's [Baseline](https://web.dev/baseline) browser compatibility data directly into your editor with **intelligent recommendations** powered by algorithmic similarity matching. Built for the Baseline Tooling Hackathon.
 
-![Baseline Navigator Demo](./assets/full.gif)
+![Demo](./assets/full.gif)
 
----
+## Why I Built This
 
-## The Problem
+I got tired of the constant context-switching. See a cool CSS feature → check Can I Use → check MDN → check if Safari supports it → forget what I was building. Repeat 20 times a day.
 
-The web platform evolves rapidly. Developers face a constant dilemma: *Can I safely use this modern feature in production?* The answer requires checking multiple sources—MDN, Can I Use, release notes—fragmenting the development workflow and slowing down innovation.
+Google's Baseline initiative finally standardized what "production-ready" means across browsers, but the data lived on websites, not where I actually code. So I built this.
 
-**Google's [Baseline](https://web.dev/baseline)** solves this by providing clear, standardized compatibility status across major browsers. But developers need this information *where they work*—inside their editor, the moment they write code.
+**Then I made it smart.** Instead of just showing compatibility data, it now **recommends alternatives**, **discovers upgrade paths**, and **learns relationships** between features automatically. No more guessing what to use instead of that experimental feature.
 
-## Our Solution
+## What Makes This Different
 
-**Baseline Navigator** bridges this gap with an intelligent VS Code extension that transforms how developers adopt modern web features. Instead of just warning about compatibility issues, it provides:
+Most compatibility tools are basically glorified lookups. You ask "can I use X?" and they say "yes/no". This extension does that, but also:
 
-- **Real-time analysis** of your entire codebase
-- **Actionable recommendations** for modernization
-- **Visual exploration** through an interactive knowledge graph
-- **Zero configuration** with offline-first architecture
+- **Discovers alternatives algorithmically** using 6 similarity metrics (name, description, category, browser support, temporal, baseline status)
+- **Finds upgrade paths** from legacy features to modern equivalents automatically
+- **Configurable for your project** - set target browsers and get personalized warnings
+- **Works for ALL features** - not just the 50 hardcoded mappings, but all 1000+ features in the database
 
-Built for the [**Baseline Tooling Hackathon**](https://baseline.devpost.com/).
+Think of it as "IntelliSense for web compatibility".
 
----
+## Features
 
-## Key Features
+### 1. Smart Recommendations Engine
 
-### **Project-Wide Compatibility Analysis**
+When you hover over or click a feature with limited support, you get:
 
-Run a comprehensive scan to generate your **Compatibility Score**—an instant health check of how modern and cross-browser compatible your codebase is.
+**Algorithmic Alternatives** (85% confidence):
+- Finds features in the same category with better support
+- Calculates similarity using name matching, description analysis, and browser overlap
+- Works for features I've never seen before
 
-- Analyzes `.css`, `.scss`, `.js`, `.ts`, `.jsx`, `.tsx` files
-- Counts feature usage across your entire project
-- Categorizes features by Baseline status
-- Generates detailed reports with actionable insights
+**Curated Alternatives** (95% confidence):
+- Hand-picked replacements for critical features
+- e.g., `@container` → `@media queries` + `clamp()`
 
-### **Real-Time Diagnostics**
+**Upgrade Paths** (90% confidence):
+- Detects legacy patterns and suggests modern equivalents
+- e.g., `float` → `flexbox` → `grid`
+- Uses temporal similarity to find "what came after this?"
 
-Baseline Navigator integrates seamlessly with VS Code's diagnostics engine:
+**Complementary Features** (75% confidence):
+- Features that work well together
+- e.g., Using `grid`? Consider `gap`, `subgrid`, `aspect-ratio`
 
-- **Inline warnings** for features with limited or newly available support
-- **Hover tooltips** with detailed Baseline status, browser versions, and availability dates
-- **Severity levels** that respect your project's risk tolerance
-- **No internet required**—all data bundled locally
+![Recommendations Demo](./assets/hover.gif)
 
-### **Intelligent Recommendations**
+Each recommendation shows:
+- Confidence score (how sure the algorithm is)
+- Reason (why it's being suggested)
+- Baseline status (safe to use or not)
+- Click to navigate to that feature
 
-More than a linter—it's your modernization assistant:
+### 2. Project Health Analysis
 
-1. **Alternatives**: Suggests widely-supported replacements for risky features
-   - Example: Recommends `@media` queries instead of experimental Container Queries
-2. **Upgrades**: Identifies outdated patterns and proposes modern equivalents
-   - Example: Detects `float` layouts and suggests upgrading to `flexbox` or `grid`
+Run `Baseline: Analyze Project Compatibility` to scan your entire codebase.
 
-### **Interactive Knowledge Graph**
+**Detects 60+ patterns** across CSS and JavaScript:
+- **CSS**: Grid, Flexbox, Container Queries, `:has()`, Nesting, Cascade Layers, Custom Properties, `clamp()`, Backdrop Filter, Scroll Snap, and more
+- **JavaScript**: Fetch, Promises, Async/Await, Optional Chaining, Intersection Observer, Web Components, ES6 Modules, and more
 
-Visualize the web platform ecosystem in stunning detail:
+![Project Analysis](./assets/project_analyzer.gif)
 
-- **Force-directed graph** with 100+ web features
-- **Color-coded nodes** by Baseline status (Green = Widely Available, Yellow = Newly Available, Red = Limited)
-- **Smart relationships** showing feature dependencies and alternatives
-- **Click-to-explore** for discovering migration paths and related technologies
-- **Filter by category, status, or timeline**
+**You get:**
+- Compatibility score (0-100)
+- Feature breakdown (safe vs risky)
+- Usage frequency per feature
+- File-by-file locations
+- Actionable suggestions with alternatives
 
----
 
-## How It Works
+### 3. Interactive Feature Graph
 
-Baseline Navigator is engineered for **speed and accuracy**, built on a robust analysis pipeline:
+Force-directed graph showing 100+ web features with their relationships.
 
-### Architecture
+![Graph Demo](./assets/knowledge_graph.gif)
 
+**Features:**
+- **Color-coded by status**: Green (widely available), Yellow (newly available), Red (limited/unknown)
+- **Shows relationships**: Dashed lines = alternatives, Arrows = upgrade paths, Solid lines = related features
+- **Interactive exploration**: Click any node → see smart recommendations
+- **Search & filter**: Type to highlight matching features
+- **Multiple layouts**: Compatibility view, Category grouping, Timeline view
+- **Live stats**: See CSS vs JS breakdown, support distribution
+
+**Discovery mode**: Start with what you know (e.g., "flexbox") → explore alternatives and upgrades → learn about complementary features. It's like a Wikipedia rabbit hole for web features.
+
+### 4. ⚙️ Project-Specific Configuration
+
+Set your target browsers and risk tolerance. The extension adapts to **your** needs.
+
+Run `Baseline: Configure Browser Targets` for an interactive wizard, or edit settings:
+
+```json
+{
+  "baseline-navigator.targetBrowsers": ["chrome", "firefox", "safari", "edge"],
+  "baseline-navigator.minimumBrowserVersions": {
+    "chrome": "90",
+    "firefox": "88",  
+    "safari": "14"
+  },
+  "baseline-navigator.riskTolerance": "moderate"
+}
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    VS Code Extension                        │
-├─────────────────────────────────────────────────────────────┤
-│  Extension Host  │  Inverted Index  │  Project Analyzer    │
-│  (extension.ts)  │  (Fast Lookups)  │  (Regex Scanner)     │
-├─────────────────────────────────────────────────────────────┤
-│           Baseline Data (web-features NPM)                  │
-│         1,000+ features -  Offline-first -  1.3MB             │
-├─────────────────────────────────────────────────────────────┤
-│  VS Code API  │  Webviews  │  Diagnostics  │  Hovers       │
-└─────────────────────────────────────────────────────────────┘
-```
 
-### Processing Pipeline
+**What this does:**
+- **Hover info** shows only your target browsers
+- **Diagnostics** warn only about features unsupported by your targets
+- **Recommendations** prioritize features that work in your browser set
+- **Risk tolerance** controls warning strictness:
+  - `strict` - Warn about newly available features
+  - `moderate` - Warn about limited support (default)
+  - `permissive` - Warn only about completely unsupported
 
-1. **Data Source**: Uses official [`web-features`](https://www.npmjs.com/package/web-features) package as the single source of truth
-2. **Inverted Index**: Builds an in-memory index on startup for sub-millisecond feature lookups
-3. **File Scanner**: Analyzes workspace files using optimized regex patterns for CSS/JS feature detection
-4. **Compatibility Engine**: Cross-references detected features with Baseline data to calculate scores
-5. **Multi-Surface Integration**: Results surface through:
-   - **Webviews** for interactive reports and graph visualization
-   - **Diagnostics** for inline code warnings
-   - **Hover Providers** for contextual information
-   - **Code Actions** for quick-fix suggestions
+Status bar shows your current mode: `Baseline [moderate]`
 
-### Innovation Highlights
+### 5. Inline Diagnostics & Code Actions
 
-- **Inverted search index** enables "What can I use with Chrome 90?" queries (not just "Can I use Grid?")
-- **Knowledge graph visualization** reveals hidden relationships between web features
-- **Dual recommendation system** covers both risk mitigation (alternatives) and modernization (upgrades)
-- **Offline-first design** with zero API calls—works on planes, trains, and air-gapped networks
+**Real-time warnings** in your editor:
+- Squiggly underlines for risky features
+- Hover to see why it's flagged
+- Configurable severity (Error/Warning/Info)
 
----
+**Quick fixes** via lightbulb:
+- Click to see alternatives
+- One-click refactoring (where applicable)
+- Links to documentation
+
+Works in: CSS, SCSS, LESS, JavaScript, TypeScript, JSX, TSX, HTML
 
 ## Installation
 
+### Quick Install (Recommended)
 
-### Option 1: Install Pre-built Extension (Recommended for Testing)
+1. Download the [latest release `.vsix` file](https://github.com/AnchitSingh/baseline-navigator/releases/latest)
+2. In VS Code: Extensions → `...` menu → Install from VSIX
+3. Select the downloaded file
+4. Reload VS Code
+5. Run `Baseline: Configure Browser Targets` to set up (optional but recommended)
 
-1. Download the latest release: [`baseline-navigator-1.0.0.vsix`](https://github.com/AnchitSingh/baseline-navigator/releases/latest)
-2. Open VS Code
-3. Go to **Extensions** → Click `...` (three dots) → **Install from VSIX...**
-4. Select the downloaded `.vsix` file
-5. Reload VS Code
-6. Done! Try hovering over CSS in any file
+Try hovering over `display: grid` or `@container` to see it in action.
 
-### Option 2: Build from Source (For Development)
+### Build from Source
 
-```
+```bash
 git clone https://github.com/AnchitSingh/baseline-navigator.git
 cd baseline-navigator
 npm install
@@ -132,67 +157,247 @@ npm run compile
 # Press F5 in VS Code to launch Extension Development Host
 ```
 
----
-
 ## Usage
 
-### Quick Start
+### Commands (Ctrl+Shift+P / Cmd+Shift+P):
 
-1. **Open** a web project in VS Code
-2. **Press** `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
-3. **Run**: `Baseline: Analyze Project Compatibility`
-4. **Explore** your compatibility score, feature breakdown, and recommendations
+- `Baseline: Configure Browser Targets` - Interactive setup wizard
+- `Baseline: Analyze Project Compatibility` - Full project scan
+- `Baseline: Show Feature Graph` - Open interactive visualization  
+- `Baseline: Quick Compatibility Check` - Fast project overview
+- `Baseline: Check File Compatibility` - Analyze current file only
 
-### Commands
+### Settings:
 
-| Command | Description |
-|---------|-------------|
-| `Baseline: Analyze Project Compatibility` | Run full codebase analysis and generate report |
-| `Baseline: Show Feature Graph` | Open interactive knowledge graph visualization |
-| `Baseline: Check File Compatibility` | Analyze current file only |
+Open Settings (Ctrl+,) and search for "Baseline Navigator". Key options:
 
----
+```json
+{
+  // Master toggle
+  "baseline-navigator.enabled": true,
+  
+  // Auto-check on save
+  "baseline-navigator.checkOnSave": true,
+  
+  // Target browsers
+  "baseline-navigator.targetBrowsers": ["chrome", "firefox", "safari", "edge"],
+  
+  // Warning strictness
+  "baseline-navigator.riskTolerance": "moderate", // strict | moderate | permissive
+  
+  // Recommendations
+  "baseline-navigator.showRecommendations": true,
+  "baseline-navigator.maxRecommendations": 5,
+  
+  // UI toggles
+  "baseline-navigator.enableHoverInfo": true,
+  "baseline-navigator.enableCodeActions": true
+}
+```
 
-## 🎥 Demo
+## How It Works (Technical Deep Dive)
 
-### Hover Tooltips
-![Hover Demo](./assets/hover.gif)
+### Architecture
 
-### Knowledge Graph
-![Graph Demo](./assets/knowledge_graph.gif)
+```
+VS Code Extension
+├─ ConfigurationManager (user settings & browser targets)
+├─ FeaturePatternRegistry (60+ detection patterns)
+├─ InvertedIndex (fast feature lookups)
+├─ SimilarityEngine (6 algorithmic metrics)
+│  ├─ Name similarity (Jaccard + Levenshtein)
+│  ├─ Description similarity (text analysis)
+│  ├─ Category matching
+│  ├─ Browser support overlap
+│  ├─ Baseline status correlation
+│  └─ Temporal similarity (release dates)
+├─ RecommendationEngine (hardcoded + algorithmic)
+├─ ProjectAnalyzer (regex-based code scanner)
+├─ Providers (Hover, Diagnostics, CodeActions)
+└─ GraphView (D3 force-directed visualization)
+   └─ web-features data (1000+ features bundled)
+```
 
-### Project Analysis Report
-![Report Demo](./assets/project_analyzer.gif)
+### Data Flow
 
----
+**Hover Flow:**
+```
+User hovers over "grid"
+  → FeaturePatternRegistry resolves aliases
+  → InvertedIndex fetches feature data
+  → SimilarityEngine finds related features
+  → RecommendationEngine ranks by confidence
+  → HoverProvider shows formatted tooltip
+```
 
-## Hackathon Submission
+**Recommendation Algorithm:**
 
-This project was created for the **Baseline Tooling Hackathon** (September-October 2025).
+For any feature, the engine:
 
-### Judging Criteria Alignment
+1. **Checks hardcoded mappings** (curated alternatives, 95% confidence)
+2. **Runs similarity analysis** against all features:
+   - Name matching: "grid-template-columns" → "subgrid" (high similarity)
+   - Category: Both in "layout" category (+0.4 score)
+   - Browser support: Similar version requirements (+0.15 score)
+   - Temporal: Released around same time (+0.1 score)
+   - Composite score: 0.85 → included as recommendation
+3. **Filters by baseline status** (only suggest widely supported)
+4. **Ranks by confidence** (hardcoded > algorithmic > contextual)
+5. **Returns top N** (configurable, default 5)
 
-**Innovation**: 
-- First tool to combine inverted index search with visual knowledge graphs
-- Dual recommendation engine (alternatives + upgrades)
-- Offline-first architecture for universal accessibility
+**Why this works:** Most features don't have hardcoded alternatives, but similarity metrics can discover "oh, you're using experimental `@container`? Here are 3 features in the same category with `widely` support that do similar things."
 
-**Usefulness**:
-- Integrates with VS Code (14M+ developers)
-- Works across CSS, JavaScript, TypeScript ecosystems
-- Zero-config experience with immediate value
+### Pattern Detection
 
-### Technical Stack
+Uses **centralized FeaturePatternRegistry** with regex patterns:
+
+```typescript
+// Example: Container Queries
+{
+  id: 'container-queries',
+  aliases: ['css-container-queries', 'container'],
+  patterns: [
+    /@container(?:\s+[\w-]+)?(?:\s*\([^)]+\))?/gi,
+    /container-(?:type|name):/gi
+  ],
+  category: 'css',
+  alternatives: ['media-queries', 'clamp'],
+  complementary: ['clamp', 'aspect-ratio']
+}
+```
+
+**60+ patterns** covering CSS layout, selectors, functions, visual effects, animations, scroll, and JavaScript APIs.
+
+### Inverted Index
+
+Pre-builds indices for:
+- Baseline status → feature IDs
+- Browser + version → feature IDs  
+- Category → feature IDs
+- Tags → feature IDs
+- Name → feature ID
+
+Enables instant lookups like "all features with `baseline: 'limited'`" or "all features Safari 14+ supports".
+
+### Graph Visualization
+
+Uses D3 force simulation with:
+- **Repulsion** between nodes (avoid overlap)
+- **Attraction** along edges (show relationships)
+- **Center gravity** (keep it bounded)
+
+Edges connect:
+- Alternatives (dashed blue lines)
+- Upgrades (green arrows)
+- Related features in same category (thin white lines)
+
+Layouts reorganize by compatibility status, category, or timeline.
+
+
+**Optimizations:**
+- Caching with configurable timeout (default 5min)
+- Lazy graph initialization
+- Debounced diagnostics
+- Incremental file scanning
+
+## Limitations & Future Ideas
+
+**Current limitations:**
+- Regex pattern matching has gaps (e.g., CSS-in-JS, dynamic feature usage)
+- Graph limited to 100 nodes for performance
+- No framework-specific detection (React hooks, Vue composition API)
+- Recommendations don't consider project dependencies
+
+**Roadmap:**
+- [ ] AST parsing for more accurate detection
+- [ ] Framework adapters (React, Vue, Angular, Svelte)
+- [ ] Integration with real usage analytics (MDN, Chrome UX Report)
+- [ ] AI-powered recommendations (fine-tuned on migration patterns)
+- [ ] Team sharing (export/import configuration)
+- [ ] CI/CD integration (fail builds on risky features)
+- [ ] Historical trend tracking ("your compatibility score over time")
+
+## Tech Stack
 
 - **Language**: TypeScript
 - **Platform**: VS Code Extension API
-- **Data Source**: `web-features` NPM package (official Baseline data)
-- **Visualization**: Force-graph library (D3-based)
-- **Bundler**: Webpack
+- **Data source**: `web-features` npm package (official Google Baseline data)
+- **Visualization**: D3.js force-directed graphs, custom Canvas rendering
+- **Build**: Webpack 5
+- **Testing**: VS Code Extension Test Suite
 
+## Hackathon Context
 
----
+Built for the [Baseline Tooling Hackathon](https://baseline.devpost.com/) (Sept-Oct 2025).
+
+### Why This Deserves Recognition
+
+**Innovation**
+- First tool (that I know of) to use **algorithmic similarity matching** for web feature recommendations
+- Most compatibility checkers just lookup data; this one **discovers relationships** and **suggests alternatives** automatically
+- Novel approach: inverted index + knowledge graph + machine learning-style scoring
+- Works for features that don't have hardcoded mappings (scales to 1000+ features)
+
+**Usefulness**
+- Integrates with VS Code (14M+ developers worldwide)
+- Zero configuration required (works out of the box)
+- Configurable for real projects (set your browser targets, not generic advice)
+- Saves hours of context-switching (no more "let me check Can I Use")
+- I'm already using it daily in production projects
+
+**Use of Baseline Data**
+- Uses `web-features` npm package as single source of truth (1000+ features)
+- All compatibility info, status labels, browser versions, and dates come from official Baseline data
+- Inverted index enables novel queries (e.g., "what became baseline in 2023?")
+- Graph visualization makes Baseline data explorable and discoverable
+- Respects Baseline philosophy: "widely available" = safe to use
+
+**Impact Potential** 
+- Reduces time developers spend on compatibility research
+- Encourages use of modern, well-supported features
+- Educates developers about upgrade paths (e.g., "you can stop using floats now")
+- Makes Baseline data actionable (not just informational)
+- Open source - other tools can build on this approach
+
+## Contributing
+
+This started as a hackathon project but I'm maintaining it long-term. 
+
+**Areas that need work:**
+- Framework detection (React, Vue, Svelte)
+- AST parsing (better than regex)
+- Performance optimization (large projects)
+- Test coverage (currently minimal)
+- Similarity algorithm tuning
+
+**How to contribute:**
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests if applicable
+5. Submit a PR
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## License
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+MIT - see [LICENSE](LICENSE)
+
+## Acknowledgments
+
+- **Google Baseline Team** for standardizing browser compatibility
+- **web-features maintainers** for the excellent data package
+- **VS Code team** for the extension API
+- **D3.js community** for visualization tools
+
+---
+
+**Built by** [@AnchitSingh](https://github.com/AnchitSingh)  
+**Report bugs:** [GitHub Issues](https://github.com/AnchitSingh/baseline-navigator/issues)  
+**Join discussion:** [GitHub Discussions](https://github.com/AnchitSingh/baseline-navigator/discussions)
+
+⭐ If this extension saved you time, consider starring the repo!
+
+---
+
+*"Stop switching tabs. Start shipping features."* - Baseline Navigator

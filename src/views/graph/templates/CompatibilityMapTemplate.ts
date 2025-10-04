@@ -28,13 +28,22 @@ export class CompatibilityMapTemplate {
     }
 
     private calculateStats(graphData: GraphData) {
-        const cssFeatures = graphData.nodes.filter(n => n.category === 'css');
-        const jsFeatures = graphData.nodes.filter(n => n.category === 'js' || n.category === 'api');
+        const cssFeatures = graphData.nodes.filter(n => n.languageType === 'css');
+        const jsFeatures = graphData.nodes.filter(n => n.languageType === 'js' || n.languageType === 'api');
+        
+        // Get unique categories - FIX: Make sure this exists
+        const categorySet = new Set<string>();
+        graphData.nodes.forEach(node => {
+            if (node.category) {
+                categorySet.add(node.category);
+            }
+        });
         
         return {
             total: graphData.nodes.length,
             css: cssFeatures.length,
             js: jsFeatures.length,
+            categories: Array.from(categorySet).sort(), // FIX: This was missing
             widely: graphData.nodes.filter(n => n.status === 'widely').length,
             newly: graphData.nodes.filter(n => n.status === 'newly').length,
             limited: graphData.nodes.filter(n => n.status === 'limited').length,
@@ -609,46 +618,96 @@ export class CompatibilityMapTemplate {
             #controls::-webkit-scrollbar-thumb:hover {
                 background: rgba(255, 255, 255, 0.3);
             }
+
+            .filter-section {
+                margin-bottom: 16px;
+            }
+
+            .filter-label {
+                font-size: 12px;
+                opacity: 0.7;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+        .filter-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .filter-btn {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-btn.active {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
         `;
     }
 
     private getControlPanel(): string {
-        return `
-            <div id="controls">
-                <div class="control-header">
-                    <span style="font-size: 28px;">🗺️</span>
-                    <div class="control-title">Feature Compatibility Map</div>
-                </div>
-                
-                <div class="view-modes">
-                    <div class="view-mode active" data-mode="compatibility">🎯 Compatibility</div>
-                    <div class="view-mode" data-mode="categories">📦 Categories</div>
-                    <div class="view-mode" data-mode="timeline">📅 Timeline</div>
-                </div>
-                
-                <div id="search-container">
-                    <input type="text" id="search" placeholder="Search features (e.g., grid, fetch)..." />
-                    <span class="search-icon">🔍</span>
-                </div>
-                
-                <div id="selected-feature">
-                    <div class="feature-name"></div>
-                    <div class="feature-status"></div>
-                    <div class="browser-grid"></div>
-                </div>
-                
-                <div id="recommendations">
-                    <div class="recommendations-title">💡 Smart Recommendations</div>
-                    <div id="recommendations-content"></div>
-                </div>
-                
-                <div class="action-buttons">
-                    <button class="action-btn" onclick="resetView()">🔄 Reset View</button>
-                    <button class="action-btn secondary" onclick="showTutorial()">❓ Show Help</button>
+    return `
+        <div id="controls">
+            <div class="control-header">
+                <span style="font-size: 28px;">🗺️</span>
+                <div class="control-title">Feature Compatibility Map</div>
+            </div>
+            
+            <div class="view-modes">
+                <div class="view-mode active" data-mode="compatibility">🎯 Compatibility</div>
+                <div class="view-mode" data-mode="categories">📦 Categories</div>
+                <div class="view-mode" data-mode="timeline">📅 Timeline</div>
+            </div>
+            
+            <!-- Language Filter -->
+            <div class="filter-section">
+                <div class="filter-label">Filter by language:</div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="css">CSS</button>
+                    <button class="filter-btn" data-filter="js">JavaScript</button>
                 </div>
             </div>
-        `;
-    }
+            
+            <div id="search-container">
+                <input type="text" id="search" placeholder="Search features (e.g., grid, fetch)..." />
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div id="selected-feature">
+                <div class="feature-name"></div>
+                <div class="feature-status"></div>
+                <div class="browser-grid"></div>
+            </div>
+            
+            <div id="recommendations">
+                <div class="recommendations-title">💡 Smart Recommendations</div>
+                <div id="recommendations-content"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn" onclick="resetView()">🔄 Reset View</button>
+                <button class="action-btn secondary" onclick="showTutorial()">❓ Show Help</button>
+            </div>
+        </div>
+    `;
+}
 
     private getLegend(): string {
         return `
@@ -677,37 +736,41 @@ export class CompatibilityMapTemplate {
     }
 
     private getStats(stats: any): string {
-        return `
-            <div class="graph-stats">
-                <div class="stat-row">
-                    <span class="stat-label">Total Features:</span>
-                    <span class="stat-value">${stats.total}</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-row">
-                    <span class="stat-label">CSS Features:</span>
-                    <span class="stat-value">${stats.css}</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">JS Features:</span>
-                    <span class="stat-value">${stats.js}</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-row">
-                    <span class="stat-label">Widely Available:</span>
-                    <span class="stat-value">${stats.widely}</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Newly Available:</span>
-                    <span class="stat-value">${stats.newly}</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Limited/Unknown:</span>
-                    <span class="stat-value">${stats.limited + stats.unknown}</span>
-                </div>
+    return `
+        <div class="graph-stats">
+            <div class="stat-row">
+                <span class="stat-label">Total Features:</span>
+                <span class="stat-value">${stats.total}</span>
             </div>
-        `;
-    }
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+                <span class="stat-label">CSS Features:</span>
+                <span class="stat-value">${stats.css}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">JS Features:</span>
+                <span class="stat-value">${stats.js}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Categories:</span>
+                <span class="stat-value">${stats.categories.length}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+                <span class="stat-label">Widely Available:</span>
+                <span class="stat-value">${stats.widely}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Newly Available:</span>
+                <span class="stat-value">${stats.newly}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Limited/Unknown:</span>
+                <span class="stat-value">${stats.limited + stats.unknown}</span>
+            </div>
+        </div>
+    `;
+}
 
     private getScript(graphData: GraphData): string {
         return `
@@ -724,7 +787,29 @@ export class CompatibilityMapTemplate {
             let currentMode = 'compatibility';
             let searchQuery = '';
             let currentRecommendations = null;
-            
+            let currentFilter = 'all';
+
+            // Language filter
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentFilter = e.target.dataset.filter;
+                    applyFilter();
+                });
+            });
+
+            function applyFilter() {
+                graphData.nodes.forEach(node => {
+                    if (currentFilter === 'all') {
+                        node.dimmed = false;
+                    } else if (currentFilter === 'css') {
+                        node.dimmed = node.languageType !== 'css';
+                    } else if (currentFilter === 'js') {
+                        node.dimmed = node.languageType !== 'js' && node.languageType !== 'api';
+                    }
+                });
+            }
             // Canvas setup
             function resizeCanvas() {
                 canvas.width = window.innerWidth;
@@ -916,45 +1001,50 @@ export class CompatibilityMapTemplate {
             });
             
             // Node selection - SHOW DETAILS AND REQUEST RECOMMENDATIONS
-            function selectNode(node) {
-                selectedNode = node;
-                
-                const featureEl = document.getElementById('selected-feature');
-                featureEl.classList.add('visible');
-                
-                featureEl.querySelector('.feature-name').textContent = node.label;
-                
-                const statusEl = featureEl.querySelector('.feature-status');
-                statusEl.textContent = node.status.charAt(0).toUpperCase() + node.status.slice(1);
-                statusEl.className = \`feature-status status-\${node.status}\`;
-                
-                // Show browser support
-                const browserGrid = featureEl.querySelector('.browser-grid');
-                browserGrid.innerHTML = '';
-                if (node.browsers) {
-                    Object.entries(node.browsers).forEach(([browser, version]) => {
-                        const chip = document.createElement('div');
-                        chip.className = 'browser-chip';
-                        chip.textContent = \`\${browser}: \${version}+\`;
-                        browserGrid.appendChild(chip);
-                    });
-                } else {
-                    browserGrid.innerHTML = '<div class="browser-chip" style="grid-column: 1/-1;">Browser data not available</div>';
-                }
-                
-                // Show loading state for recommendations
-                const recsContainer = document.getElementById('recommendations');
-                const recsContent = document.getElementById('recommendations-content');
-                recsContainer.classList.add('visible');
-                recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading smart recommendations...</div>';
-                
-                // Request recommendations from extension
-                vscode.postMessage({
-                    command: 'getRecommendations',
-                    featureId: node.id,
-                    languageId: node.category || 'css'
-                });
-            }
+function selectNode(node) {
+    console.log('🎯 Node selected:', node.id, node.label);
+    selectedNode = node;
+    
+    const featureEl = document.getElementById('selected-feature');
+    featureEl.classList.add('visible');
+    
+    featureEl.querySelector('.feature-name').textContent = node.label;
+    
+    const statusEl = featureEl.querySelector('.feature-status');
+    statusEl.textContent = node.status.charAt(0).toUpperCase() + node.status.slice(1);
+    statusEl.className = \`feature-status status-\${node.status}\`;
+    
+    // Show browser support
+    const browserGrid = featureEl.querySelector('.browser-grid');
+    browserGrid.innerHTML = '';
+    if (node.browsers) {
+        Object.entries(node.browsers).forEach(([browser, version]) => {
+            const chip = document.createElement('div');
+            chip.className = 'browser-chip';
+            chip.textContent = \`\${browser}: \${version}+\`;
+            browserGrid.appendChild(chip);
+        });
+    } else {
+        browserGrid.innerHTML = '<div class="browser-chip" style="grid-column: 1/-1;">Browser data not available</div>';
+    }
+    
+    // Show loading state for recommendations
+    const recsContainer = document.getElementById('recommendations');
+    const recsContent = document.getElementById('recommendations-content');
+    recsContainer.classList.add('visible');
+    recsContent.innerHTML = '<div class="loading-recommendations"><div class="spinner"></div>Loading smart recommendations...</div>';
+    
+    console.log('📤 Sending getRecommendations message for:', node.id);
+    
+    // Request recommendations from extension
+    vscode.postMessage({
+        command: 'getRecommendations',
+        featureId: node.id,
+        languageId: node.languageType || 'css'
+    });
+    
+    console.log('✅ Message sent');
+}
             
             // Search functionality - HIGHLIGHT matches
             document.getElementById('search').addEventListener('input', (e) => {
@@ -1008,7 +1098,8 @@ export class CompatibilityMapTemplate {
                 });
             }
             
-            function layoutByCategory() {
+           function layoutByCategory() {
+                // Group by ACTUAL category (from web-features)
                 const categories = {};
                 graphData.nodes.forEach(node => {
                     const cat = node.category || 'other';
@@ -1016,21 +1107,23 @@ export class CompatibilityMapTemplate {
                     categories[cat].push(node);
                 });
                 
-                const cols = Math.ceil(Math.sqrt(Object.keys(categories).length));
-                let catIndex = 0;
+                const categoryNames = Object.keys(categories).sort();
+                const cols = Math.ceil(Math.sqrt(categoryNames.length));
                 
-                Object.entries(categories).forEach(([cat, nodes]) => {
+                categoryNames.forEach((cat, catIndex) => {
+                    const nodes = categories[cat];
                     const col = catIndex % cols;
                     const row = Math.floor(catIndex / cols);
                     const baseX = (col - cols / 2) * 300;
-                    const baseY = (row - 2) * 300;
+                    const baseY = (row - Math.floor(categoryNames.length / cols) / 2) * 300;
                     
+                    // Arrange nodes in category in a circle
                     nodes.forEach((node, i) => {
                         const angle = (i / nodes.length) * Math.PI * 2;
-                        node.x = baseX + Math.cos(angle) * 80;
-                        node.y = baseY + Math.sin(angle) * 80;
+                        const radius = Math.min(80, Math.max(40, nodes.length * 8)); // Scale radius based on count
+                        node.x = baseX + Math.cos(angle) * radius;
+                        node.y = baseY + Math.sin(angle) * radius;
                     });
-                    catIndex++;
                 });
             }
             
@@ -1048,68 +1141,89 @@ export class CompatibilityMapTemplate {
             }
             
             // Handle messages from extension - RECEIVE RECOMMENDATIONS
-            window.addEventListener('message', event => {
-                const message = event.data;
-                switch (message.command) {
-                    case 'showRecommendations':
-                        displayRecommendations(message.recommendations);
-                        break;
-                }
-            });
+            // Handle messages from extension - RECEIVE RECOMMENDATIONS
+window.addEventListener('message', event => {
+    console.log('📨 Message received from extension:', event.data);
+    
+    const message = event.data;
+    switch (message.command) {
+        case 'showRecommendations':
+            console.log('💡 Showing recommendations:', message.recommendations);
+            displayRecommendations(message.recommendations);
+            break;
+        default:
+            console.log('❓ Unknown message command:', message.command);
+    }
+});
             
             function displayRecommendations(recommendations) {
-                const container = document.getElementById('recommendations-content');
-                
-                if (!recommendations || recommendations.length === 0) {
-                    container.innerHTML = '<div style="opacity: 0.7; font-size: 13px;">No recommendations available</div>';
-                    return;
-                }
-                
-                // Group by type
-                const grouped = {
-                    alternative: [],
-                    upgrade: [],
-                    complementary: [],
-                    contextual: []
-                };
-                
-                recommendations.forEach(rec => {
-                    const type = rec.type || 'contextual';
-                    if (grouped[type]) {
-                        grouped[type].push(rec);
-                    }
-                });
-                
-                container.innerHTML = '';
-                
-                // Render each group
-                const sections = [
-                    { key: 'alternative', icon: '🔄', label: 'Better Alternatives' },
-                    { key: 'upgrade', icon: '🚀', label: 'Upgrades' },
-                    { key: 'complementary', icon: '🤝', label: 'Works Well With' },
-                    { key: 'contextual', icon: '🔗', label: 'Related' }
-                ];
-                
-                sections.forEach(section => {
-                    const recs = grouped[section.key];
-                    if (recs && recs.length > 0) {
-                        const sectionDiv = document.createElement('div');
-                        sectionDiv.className = 'recommendation-section';
-                        
-                        const label = document.createElement('div');
-                        label.className = 'section-label';
-                        label.innerHTML = \`<span>\${section.icon}</span> \${section.label}\`;
-                        sectionDiv.appendChild(label);
-                        
-                        recs.forEach(rec => {
-                            const card = createRecommendationCard(rec, section.key);
-                            sectionDiv.appendChild(card);
-                        });
-                        
-                        container.appendChild(sectionDiv);
-                    }
-                });
-            }
+    console.log('🎨 displayRecommendations called with:', recommendations);
+    
+    const container = document.getElementById('recommendations-content');
+    
+    if (!recommendations || recommendations.length === 0) {
+        console.warn('⚠️ No recommendations to display');
+        container.innerHTML = '<div style="opacity: 0.7; font-size: 13px; padding: 12px;">No recommendations available for this feature</div>';
+        return;
+    }
+    
+    console.log('✅ Displaying', recommendations.length, 'recommendations');
+    
+    // Group by type
+    const grouped = {
+        alternative: [],
+        upgrade: [],
+        complementary: [],
+        contextual: []
+    };
+    
+    recommendations.forEach(rec => {
+        const type = rec.type || 'contextual';
+        if (grouped[type]) {
+            grouped[type].push(rec);
+        }
+    });
+    
+    console.log('📊 Grouped recommendations:', {
+        alternative: grouped.alternative.length,
+        upgrade: grouped.upgrade.length,
+        complementary: grouped.complementary.length,
+        contextual: grouped.contextual.length
+    });
+    
+    container.innerHTML = '';
+    
+    // Render each group
+    const sections = [
+        { key: 'alternative', icon: '🔄', label: 'Better Alternatives' },
+        { key: 'upgrade', icon: '🚀', label: 'Upgrades' },
+        { key: 'complementary', icon: '🤝', label: 'Works Well With' },
+        { key: 'contextual', icon: '🔗', label: 'Related' }
+    ];
+    
+    sections.forEach(section => {
+        const recs = grouped[section.key];
+        if (recs && recs.length > 0) {
+            console.log(\`  Creating section: \${section.label} (\${recs.length} items)\`);
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'recommendation-section';
+            
+            const label = document.createElement('div');
+            label.className = 'section-label';
+            label.innerHTML = \`<span>\${section.icon}</span> \${section.label}\`;
+            sectionDiv.appendChild(label);
+            
+            recs.forEach(rec => {
+                const card = createRecommendationCard(rec, section.key);
+                sectionDiv.appendChild(card);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+    
+    console.log('✅ Recommendations rendered');
+}
             
             function createRecommendationCard(rec, type) {
                 const card = document.createElement('div');

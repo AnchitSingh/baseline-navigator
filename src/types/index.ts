@@ -4,7 +4,7 @@ export interface Feature {
     description?: string;
     description_html?: string;
     status?: {
-        baseline?: 'widely' | 'newly' | 'limited' | false;
+        baseline?: 'widely' | 'newly' | 'limited' | false | 'high' | 'low';
         baseline_status?: string;
         baseline_low_date?: string;
         baseline_high_date?: string;

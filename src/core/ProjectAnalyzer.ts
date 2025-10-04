@@ -139,9 +139,12 @@ export class ProjectAnalyzer {
                     id: patternId,
                     name: pattern?.description || patternId.replace(/-/g, ' '),
                     description: pattern?.description,
+                    spec: {
+                        category: pattern?.subcategory || 'other' // Use subcategory as category
+                    },
                     status: {
                         baseline: pattern?.riskLevel === 'safe' ? 'widely' : 
-                                 pattern?.riskLevel === 'experimental' ? 'limited' : 'newly'
+                                pattern?.riskLevel === 'experimental' ? 'limited' : 'newly'
                     }
                 };
             }

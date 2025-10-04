@@ -143,7 +143,7 @@
         },
         "baseline-navigator.recommendationConfidence": {
           "type": "number",
-          "default": 0.7,
+          "default": 0.0,
           "minimum": 0,
           "maximum": 1,
           "description": "Minimum confidence level for showing recommendations (0.0 - 1.0)",

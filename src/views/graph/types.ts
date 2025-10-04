@@ -6,7 +6,9 @@ export interface GraphNode {
     radius: number;
     color: string;
     status: string;
-    category?: string; // ADD THIS
+    category?: string;  
+    subcategory?: string;     
+    languageType?: 'css' | 'js' | 'html' | 'api';
     browsers?: any;
     baselineDate?: string;
     dimmed: boolean;

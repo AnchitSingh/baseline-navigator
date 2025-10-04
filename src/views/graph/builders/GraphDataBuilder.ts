@@ -1,31 +1,45 @@
 import { GraphData, GraphNode, GraphEdge } from '../types';
 import { getFeatureStatus } from '../utils/featureStatus';
 import { ALTERNATIVES_MAPPING, UPGRADES_MAPPING } from '../../../core/FeatureMappings';
+import { FeaturePatternRegistry } from '../../../core/FeaturePatternRegistry';
 
 export class GraphDataBuilder {
+    private patternRegistry: FeaturePatternRegistry;
+
+    constructor() {
+        this.patternRegistry = new FeaturePatternRegistry();
+    }
+
     async buildMeaningfulGraph(features: any[]): Promise<GraphData> {
         const nodes: GraphNode[] = [];
         const edges: GraphEdge[] = [];
         const nodeMap = new Map<string, GraphNode>();
 
-        // Create nodes - INCLUDE CATEGORY
+        // Create nodes with proper categorization
         features.slice(0, 100).forEach(feature => {
             const status = getFeatureStatus(feature);
             
-            // Determine category from spec or ID patterns
-            let category = 'css';
-            if (feature.spec?.category) {
-                category = 'css'; // Most web-features are CSS
-            }
-            // Detect JS features
-            if (feature.id.includes('api') || 
-                feature.id.includes('observer') || 
-                feature.id.includes('promise') ||
-                feature.id.includes('async') ||
-                feature.id.includes('fetch') ||
-                feature.id.includes('custom-elements') ||
-                feature.id.includes('shadow')) {
-                category = 'js';
+            // Get actual category from web-features
+            const actualCategory = feature.spec?.category || feature.group || 'other';
+            
+            // Get pattern definition for subcategory and language type
+            const pattern = this.patternRegistry.getPattern(feature.id);
+            
+            // Determine language type
+            let languageType: 'css' | 'js' | 'html' | 'api' = 'css';
+            if (pattern) {
+                languageType = pattern.category;
+            } else {
+                // Fallback detection if not in pattern registry
+                if (feature.id.includes('api') || 
+                    feature.id.includes('observer') || 
+                    feature.id.includes('promise') ||
+                    feature.id.includes('async') ||
+                    feature.id.includes('fetch') ||
+                    feature.id.includes('custom-elements') ||
+                    feature.id.includes('shadow')) {
+                    languageType = 'js';
+                }
             }
             
             const node: GraphNode = {
@@ -36,7 +50,9 @@ export class GraphDataBuilder {
                 radius: status.size,
                 color: status.color,
                 status: status.key,
-                category: category, // ADD THIS
+                category: actualCategory,           // ACTUAL category (e.g., "layout", "selectors")
+                subcategory: pattern?.subcategory,  // Subcategory from registry
+                languageType: languageType,         // Language type for filtering
                 browsers: feature.status?.support,
                 baselineDate: feature.status?.baseline_low_date,
                 dimmed: false
@@ -89,15 +105,18 @@ export class GraphDataBuilder {
     }
 
     private createCategoryEdges(edges: GraphEdge[], nodes: GraphNode[]): void {
+        // Group by ACTUAL category (not language type)
         const categoryGroups = new Map<string, GraphNode[]>();
         nodes.forEach(node => {
-            if (!categoryGroups.has(node.category!)) {
-                categoryGroups.set(node.category!, []);
+            const cat = node.category || 'other';
+            if (!categoryGroups.has(cat)) {
+                categoryGroups.set(cat, []);
             }
-            categoryGroups.get(node.category!)!.push(node);
+            categoryGroups.get(cat)!.push(node);
         });
 
         categoryGroups.forEach(group => {
+            // Connect features within same category
             for (let i = 0; i < Math.min(group.length - 1, 3); i++) {
                 edges.push({
                     from: group[i],
