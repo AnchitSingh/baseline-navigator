@@ -106,29 +106,37 @@ export class SimilarityEngine {
     /**
  * Calculate category similarity
  */
-public categorySimilarity(feature1: Feature, feature2: Feature): number {
-    // FIX: Use group as fallback for category
-    const cat1 = feature1.spec?.category || feature1.group;
-    const cat2 = feature2.spec?.category || feature2.group;
-    
-    // Same category
-    if (cat1 && cat2 && cat1 === cat2) {
-        return 1.0;
-    }
-    
-    // Tag overlap
-    if (feature1.tags && feature2.tags) {
-        const tags1 = new Set(feature1.tags);
-        const tags2 = new Set(feature2.tags);
-        const intersection = new Set([...tags1].filter(x => tags2.has(x)));
-        
-        if (intersection.size > 0) {
-            return intersection.size / Math.max(tags1.size, tags2.size) * 0.6;
+    public categorySimilarity(feature1: Feature, feature2: Feature): number {
+        // FIX: Handle group as array
+        const cat1 = feature1.spec?.category || feature1.group;
+        const cat2 = feature2.spec?.category || feature2.group;
+
+        // Convert to arrays for comparison
+        const cat1Array = Array.isArray(cat1) ? cat1 : (cat1 ? [cat1] : []);
+        const cat2Array = Array.isArray(cat2) ? cat2 : (cat2 ? [cat2] : []);
+
+        // Calculate overlap
+        const intersection = cat1Array.filter(c => cat2Array.includes(c));
+
+        if (intersection.length > 0) {
+            // More overlap = higher similarity
+            const overlapRatio = intersection.length / Math.max(cat1Array.length, cat2Array.length);
+            return overlapRatio;
         }
+
+        // Tag overlap as fallback
+        if (feature1.tags && feature2.tags) {
+            const tags1 = new Set(feature1.tags);
+            const tags2 = new Set(feature2.tags);
+            const tagIntersection = new Set([...tags1].filter(x => tags2.has(x)));
+
+            if (tagIntersection.size > 0) {
+                return tagIntersection.size / Math.max(tags1.size, tags2.size) * 0.6;
+            }
+        }
+
+        return 0;
     }
-    
-    return 0;
-}
 
     /**
      * Calculate browser support overlap
@@ -317,27 +325,42 @@ public categorySimilarity(feature1: Feature, feature2: Feature): number {
 
         // Only look for alternatives if current feature has limited support
         if (targetBaseline === 'widely' || targetBaseline === 'high') {
-        return [];
-    }
+            return [];
+        }
+
+        // Get target categories
+        const targetCategory = targetFeature.spec?.category || targetFeature.group;
+        const targetCategoryArray = Array.isArray(targetCategory) ? targetCategory : (targetCategory ? [targetCategory] : []);
+
+        console.log('   findBetterAlternatives: target categories =', targetCategoryArray);
 
         // Find features with better support but similar functionality
         const alternatives = candidates
             .filter(f => {
                 const baseline = f.status?.baseline;
-            // FIX: Feature must be widely supported (either 'widely' or 'high')
-            return (baseline === 'widely' || baseline === 'high') && f.id !== targetFeature.id;
+                const fCategory = f.spec?.category || f.group;
+                const fCategoryArray = Array.isArray(fCategory) ? fCategory : (fCategory ? [fCategory] : []);
+
+                // Must be widely supported and have category overlap
+                const hasOverlap = targetCategoryArray.some(cat => fCategoryArray.includes(cat));
+
+                return (baseline === 'widely' || baseline === 'high') &&
+                    f.id !== targetFeature.id &&
+                    (hasOverlap || targetCategoryArray.length === 0); // If no category, don't filter by it
             })
             .map(f => this.calculateSimilarity(targetFeature, f, {
                 name: 0.3,
                 description: 0.2,
-                category: 0.4, // Higher weight on category for alternatives
+                category: 0.4,
                 browserSupport: 0.05,
                 baseline: 0.05,
                 temporal: 0
             }))
-            .filter(s => s.score >= 0.4) // Higher threshold for alternatives
+            .filter(s => s.score >= 0.3) // Lower threshold
             .sort((a, b) => b.score - a.score)
             .slice(0, maxResults);
+
+        console.log('   Found', alternatives.length, 'better alternatives');
 
         return alternatives;
     }
@@ -379,59 +402,47 @@ public categorySimilarity(feature1: Feature, feature2: Feature): number {
         return upgrades;
     }
 
+
     /**
  * Find complementary features (often used together)
  */
-public findComplementary(
-    targetFeature: Feature,
-    candidates: Feature[],
-    maxResults: number = 5
-): SimilarityScore[] {
-    // Get category - FIX: Use group as fallback
-    const targetCategory = targetFeature.spec?.category || targetFeature.group;
-    console.log('   findComplementary: targetCategory =', targetCategory);
-    console.log('   findComplementary: candidates =', candidates.length);
-    
-    if (!targetCategory) {
-        console.log('   Target feature has no category, returning empty');
-        return [];
+    public findComplementary(
+        targetFeature: Feature,
+        candidates: Feature[],
+        maxResults: number = 5
+    ): SimilarityScore[] {
+        // Get category - FIX: Handle as array
+        const targetCategory = targetFeature.spec?.category || targetFeature.group;
+        const targetCategoryArray = Array.isArray(targetCategory) ? targetCategory : (targetCategory ? [targetCategory] : []);
+
+        console.log('   findComplementary: targetCategories =', targetCategoryArray);
+        console.log('   findComplementary: candidates =', candidates.length);
+
+        if (targetCategoryArray.length === 0) {
+            console.log('   Target feature has no category, returning empty');
+            return [];
+        }
+
+        // Calculate similarity for all candidates
+        const complementary = candidates
+            .map(f => this.calculateSimilarity(targetFeature, f, {
+                name: 0.1,
+                description: 0.15,
+                category: 0.5,  // Very high weight on category
+                browserSupport: 0.15,
+                baseline: 0.05,
+                temporal: 0.05
+            }))
+            .filter(s => s.score >= 0.3) // Lower threshold to get some results
+            .sort((a, b) => b.score - a.score)
+            .slice(0, maxResults);
+
+        console.log('   Returning', complementary.length, 'complementary features');
+        if (complementary.length > 0) {
+            console.log('   Top match:', complementary[0]);
+        }
+
+        return complementary;
     }
 
-     // Filter candidates
-    const sameCategoryFeatures = candidates.filter(f => {
-        const baseline = f.status?.baseline;
-        const fCategory = f.spec?.category || f.group;
-        
-        return fCategory === targetCategory &&
-               (baseline === 'widely' || baseline === 'high') && 
-               f.id !== targetFeature.id;
-    });
-    
-    console.log('   Found', sameCategoryFeatures.length, 'features in category:', targetCategory);
-    
-    // Features in same category with good support
-    const complementary = candidates
-        .filter(f => {
-            const baseline = f.status?.baseline;
-            const fCategory = f.spec?.category || f.group; // FIX: Use group
-            
-            // Must be in same category and widely supported
-            return fCategory === targetCategory &&
-                   (baseline === 'widely' || baseline === 'high') && 
-                   f.id !== targetFeature.id;
-        })
-        .map(f => this.calculateSimilarity(targetFeature, f, {
-            name: 0.1,
-            description: 0.15,
-            category: 0.5,  // Very high weight on category
-            browserSupport: 0.15,
-            baseline: 0.05,
-            temporal: 0.05
-        }))
-        .filter(s => s.score >= 0.4)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, maxResults);
-    
-    return complementary;
-}
 }
