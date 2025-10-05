@@ -6,8 +6,8 @@
     "type": "git",
     "url": "https://github.com/AnchitSingh/baseline-navigator.git"
   },
-  "version": "1.1.0",
-  "publisher": "your-publisher-name",
+  "version": "1.2.0",
+  "publisher": "Anchit",
 
   "engines": {
     "vscode": "^1.104.0"
